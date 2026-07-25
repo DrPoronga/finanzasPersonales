@@ -1,0 +1,111 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f4f7f6;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.title {
+    text-align: center;
+    font-size: 24px;
+    color: #2c3e50;
+}
+
+.subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #34495e;
+}
+
+input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+input:focus {
+    border-color: #e74c3c;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.currency {
+    position: absolute;
+    left: 15px;
+    top: 12px;
+    font-size: 16px;
+    color: #7f8c8d;
+}
+
+.input-group input {
+    padding-left: 30px;
+}
+
+.btn-gasto {
+    width: 100%;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3);
+    transition: background 0.3s;
+}
+
+.btn-gasto:hover {
+    background-color: #c0392b;
+}
+
+.oculto {
+    display: none;
+}
+
+#mensaje-exito {
+    text-align: center;
+    color: #27ae60;
+    margin-top: 15px;
+    font-weight: 600;
+}

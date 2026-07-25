@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Finanzas | Activos vs Pasivos</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Control Financiero</h1>
+        <p class="subtitle">Activos vs Pasivos</p>
+
+        <div class="card">
+            <form id="gasto-form">
+                <label for="concepto">¿En qué gastaste?</label>
+                <input type="text" id="concepto" placeholder="Ej: Nafta, Súper..." required autocomplete="off">
+
+                <label for="monto">¿Cuánto?</label>
+                <div class="input-group">
+                    <span class="currency">$</span>
+                    <input type="number" id="monto" placeholder="3000" required min="1">
+                </div>
+
+                <button type="submit" class="btn-gasto">REGISTRAR GASTO</button>
+            </form>
+            <p id="mensaje-exito" class="oculto">¡Gasto registrado con éxito!</p>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
