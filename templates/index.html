@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR CON MENÚ -->
+    <!-- MENÚ ANCLADO EN ESQUINA -->
     <header class="navbar">
         <button id="btnMenu" class="hamburger-btn">☰</button>
     </header>
@@ -41,13 +41,15 @@
             </form>
         </section>
 
-        <!-- VISTA MÉTRICAS -->
+        <!-- VISTA MÉTRICAS AMPLIADAS -->
         <section id="vistaMetricas" class="hidden">
+            <!-- Balance General -->
             <div class="card balance-card">
                 <h3>Balance Real</h3>
                 <span id="lblBalance" class="monto-destacado">$0</span>
             </div>
 
+            <!-- Grilla Principal -->
             <div class="metricas-grid">
                 <div class="card">
                     <h4>Ingresos</h4>
@@ -59,13 +61,39 @@
                 </div>
             </div>
 
-            <button id="btnActualizarMetricas" class="btn-secondary" style="margin-top: 15px;">Actualizar Cifras</button>
+            <!-- Grilla Secundaria -->
+            <div class="metricas-grid">
+                <div class="card">
+                    <h4>Tasa de Ahorro</h4>
+                    <span id="lblTasaAhorro">0%</span>
+                </div>
+                <div class="card">
+                    <h4>Ticket Promedio</h4>
+                    <span id="lblTicketPromedio">$0</span>
+                </div>
+            </div>
+
+            <!-- Categoría Principal -->
+            <div class="card">
+                <h4>Mayor Categoría de Gasto</h4>
+                <span id="lblTopCategoria" style="font-size: 20px; font-weight: 600;">-</span>
+            </div>
+
+            <!-- Desglose por Categoría -->
+            <div class="card desglose-card">
+                <h4>Gastos por Categoría</h4>
+                <div id="listaDesglose">
+                    <!-- Se llena desde JS -->
+                </div>
+            </div>
+
+            <button id="btnActualizarMetricas" class="btn-secondary" style="margin-top: 10px;">Actualizar Cifras</button>
         </section>
 
         <div id="mensaje" class="hidden"></div>
     </div>
 
-    <!-- MODAL DE CLASIFICACIÓN / APRENDIZAJE -->
+    <!-- MODAL -->
     <div id="modalCategoria" class="modal hidden">
         <div class="modal-content">
             <h2>Clasificar</h2>
@@ -73,8 +101,7 @@
             
             <select id="selectCategoria"></select>
             
-            <!-- Campo oculto para ingresar una categoría completamente nueva -->
-            <div id="containerNuevaCategoria" class="form-group hidden" style="margin-top: 15px;">
+            <div id="containerNuevaCategoria" class="form-group hidden">
                 <input type="text" id="inputNuevaCategoria" placeholder="Nombre de la nueva categoría">
             </div>
 

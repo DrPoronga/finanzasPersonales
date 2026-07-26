@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
 
-    // Modal & Nueva Categoría
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
     const selectCategoria = document.getElementById('selectCategoria');
@@ -26,10 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnGuardarCategoria = document.getElementById('btnGuardarCategoria');
     const btnCancelarModal = document.getElementById('btnCancelarModal');
 
-    let tipoActual = "Pasivo"; // "Pasivo" = Gasto, "Activo" = Ingreso
+    let tipoActual = "Pasivo";
     let gastoPendiente = null;
 
-    // --- MENÚ Y NAVEGACIÓN ---
+    // --- NAV Y MENÚ ---
     function toggleMenu() {
         sideMenu.classList.toggle('hidden');
         overlay.classList.toggle('hidden');
@@ -80,7 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    // --- MÉTRICAS ---
+    // --- CARGAR MÉTRICAS AMPLIADAS ---
     async function cargarMetricas() {
         try {
             const res = await fetch('/obtener_metricas');
@@ -89,13 +88,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblBalance').textContent = data.balance;
                 document.getElementById('lblIngresos').textContent = data.ingresos;
                 document.getElementById('lblGastos').textContent = data.gastos;
+                document.getElementById('lblTasaAhorro').textContent = data.tasa_ahorro;
+                document.getElementById('lblTicketPromedio').textContent = data.ticket_promedio;
+                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
+
+                // Renderizar desglose por categoría
+                const listaContainer = document.getElementById('listaDesglose');
+                listaContainer.innerHTML = '';
+
+                if (data.desglose && data.desglose.length > 0) {
+                    data.desglose.forEach(item => {
+                        const divItem = document.createElement('div');
+                        divItem.className = 'desglose-item';
+                        divItem.innerHTML = `
+                            <span class="desglose-nombre">${item.categoria}</span>
+                            <div class="desglose-valores">
+                                <span class="desglose-monto">${item.monto}</span>
+                                <span class="desglose-pct">(${item.porcentaje})</span>
+                            </div>
+                        `;
+                        listaContainer.appendChild(divItem);
+                    });
+                } else {
+                    listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
+                }
             }
         } catch (error) {
-            console.error("Error al cargar métricas", error);
+            console.error("Error cargando métricas", error);
         }
     }
 
-    // --- ENVÍO DE FORMULARIO ---
+    // --- ENVIAR MOVIMIENTO ---
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
@@ -140,22 +163,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- MODAL Y CREACIÓN DE CATEGORÍAS ---
+    // --- MODAL Y NUEVAS CATEGORÍAS ---
     function abrirModal(concepto, categoriasDisponibles) {
         conceptoModal.textContent = concepto;
         selectCategoria.innerHTML = '';
         inputNuevaCategoria.value = '';
         containerNuevaCategoria.classList.add('hidden');
 
-        // Cargar categorías existentes
         categoriasDisponibles.forEach(cat => {
             const opt = document.createElement('option');
-            opt.value = cat; 
-            opt.textContent = cat;
+            opt.value = cat; opt.textContent = cat;
             selectCategoria.appendChild(opt);
         });
 
-        // Opción especial para crear una nueva
         const optNueva = document.createElement('option');
         optNueva.value = "__NUEVA__";
         optNueva.textContent = "+ Crear nueva categoría...";
@@ -164,7 +184,6 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.classList.remove('hidden');
     }
 
-    // Detectar si el usuario selecciona "+ Crear nueva categoría..."
     selectCategoria.addEventListener('change', () => {
         if (selectCategoria.value === "__NUEVA__") {
             containerNuevaCategoria.classList.remove('hidden');
@@ -182,7 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (categoriaFinal === "__NUEVA__") {
             categoriaFinal = inputNuevaCategoria.value.trim();
             if (!categoriaFinal) {
-                alert("Ingresa un nombre para la nueva categoría.");
+                alert("Ingresa un nombre para la categoría.");
                 return;
             }
         }

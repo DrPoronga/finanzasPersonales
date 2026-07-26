@@ -1,10 +1,11 @@
 :root {
-    --primary: #171717; /* Negro/Gris muy oscuro y elegante */
+    --primary: #171717;
     --primary-hover: #333333;
-    --bg: #FAFAFA; /* Fondo muy limpio */
+    --bg: #FAFAFA;
     --surface: #FFFFFF;
     --text: #171717;
     --border: #E5E5E5;
+    --subtext: #737373;
 }
 
 body {
@@ -19,16 +20,11 @@ body {
     min-height: 100vh;
 }
 
-/* NAVBAR SÚPER LIMPIA */
+/* MENÚ ANCLADO EN LA ESQUINA SUPERIOR IZQUIERDA */
 .navbar {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    padding: 20px;
+    top: 20px;
+    left: 20px;
     z-index: 100;
 }
 
@@ -100,11 +96,11 @@ body {
     z-index: 999;
 }
 
-/* CONTENEDOR PRINCIPAL INVISIBLE (Solo inputs y botón) */
+/* CONTENEDOR PRINCIPAL */
 .container {
     width: 100%;
-    max-width: 380px;
-    padding: 20px;
+    max-width: 400px;
+    padding: 80px 20px 40px 20px;
     box-sizing: border-box;
 }
 
@@ -132,7 +128,7 @@ input:focus, select:focus {
 /* BOTÓN EL DOBLE DE ALTO */
 button {
     width: 100%;
-    padding: 28px 15px; /* Altura multiplicada x2 */
+    padding: 28px 15px;
     background-color: var(--primary);
     color: white;
     border: none;
@@ -152,13 +148,14 @@ button:hover {
     background-color: transparent;
     color: var(--text);
     border: 1px solid var(--border);
+    padding: 18px 15px;
+    font-size: 16px;
 }
 
 .btn-secondary:hover {
     background-color: var(--bg);
 }
 
-/* MENSAJES Y CARDS */
 .hidden { display: none !important; }
 
 #mensaje {
@@ -171,23 +168,27 @@ button:hover {
 .success { background-color: var(--primary); color: white; }
 .error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
+/* SECCIÓN MÉTRICAS AVANZADAS */
 .card {
     background: var(--surface);
-    padding: 25px 20px;
+    padding: 22px 20px;
     border-radius: 12px;
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     border: 1px solid var(--border);
 }
 
 .card h3, .card h4 {
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
     font-weight: 400;
-    color: #666666;
+    color: var(--subtext);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .monto-destacado {
-    font-size: 36px;
+    font-size: 34px;
     font-weight: 600;
     color: var(--text);
 }
@@ -195,13 +196,57 @@ button:hover {
 .metricas-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .metricas-grid span {
-    font-size: 22px;
-    font-weight: 500;
+    font-size: 20px;
+    font-weight: 600;
     color: var(--text);
+}
+
+/* LISTA DE DESGLOSE POR CATEGORÍA */
+.desglose-card {
+    text-align: left;
+}
+
+.desglose-card h4 {
+    margin-bottom: 15px;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: var(--subtext);
+}
+
+.desglose-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+}
+
+.desglose-item:last-child {
+    border-bottom: none;
+}
+
+.desglose-nombre {
+    font-weight: 500;
+}
+
+.desglose-valores {
+    text-align: right;
+}
+
+.desglose-monto {
+    font-weight: 600;
+}
+
+.desglose-pct {
+    font-size: 12px;
+    color: var(--subtext);
+    margin-left: 6px;
 }
 
 /* MODAL SERIO */
@@ -216,5 +261,5 @@ button:hover {
     width: 90%; max-width: 350px; text-align: center;
 }
 .modal-content h2 { margin-top: 0; font-weight: 500; }
-.modal-content select { margin: 25px 0; }
+.modal-content select { margin: 20px 0; }
 .modal-content button { margin-bottom: 10px; padding: 18px; }

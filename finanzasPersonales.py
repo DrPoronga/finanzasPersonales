@@ -48,11 +48,11 @@ def registrar_gasto():
     datos = request.get_json()
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
-    tipo_ingresado = datos.get('tipo', 'Pasivo') # 'Activo' (Ingreso) o 'Pasivo' (Gasto)
+    tipo_ingresado = datos.get('tipo', 'Pasivo')
     nueva_categoria = datos.get('nueva_categoria')
 
     ahora = datetime.now()
-    fecha_hoy = me = ahora.strftime("%d/%m/%Y")
+    fecha_hoy = me = me = ahora.strftime("%d/%m/%Y")
     hora_actual = me = me = ahora.strftime("%H:%M")
     nombre_mes = MESES[ahora.month]
 
@@ -64,7 +64,6 @@ def registrar_gasto():
         if nueva_categoria:
             categoria = nueva_categoria
             tipo = tipo_ingresado
-            # Guardar la regla para futuras consultas
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
             categoria, tipo = detectar_categoria(hoja_categorias, concepto)
@@ -75,16 +74,14 @@ def registrar_gasto():
                 cat_records = hoja_categorias.col_values(2)[1:]
                 categorias_unicas = sorted(list(set([c for c in cat_records if c.strip()])))
                 
-                # Opciones por defecto si la hoja está vacía
                 if not categorias_unicas:
-                    categorias_unicas = ["Sueldo", "Alimentación", "Servicios", "Transporte", "Venta", "Varios"]
+                    categorias_unicas = ["Sueldo", "Alimentación", "Servicios", "Transporte", "Ventas", "Varios"]
                 
                 return jsonify({
                     "status": "needs_category",
                     "categorias": categorias_unicas
                 })
 
-        # Guardar en Transacciones (7 columnas)
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo])
 
         return jsonify({
@@ -107,23 +104,53 @@ def obtener_metricas():
 
         total_ingresos = 0.0
         total_gastos = 0.0
+        conteo_gastos = 0
+        gastos_por_categoria = {}
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
             tipo = str(r.get('Tipo', '')).strip().capitalize()
+            cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
 
             if tipo == 'Activo':
                 total_ingresos += monto
             else:
                 total_gastos += monto
+                conteo_gastos += 1
+                gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
 
         balance_real = total_ingresos - total_gastos
+        
+        # Tasa de ahorro (%)
+        tasa_ahorro = ((total_ingresos - total_gastos) / total_ingresos * 100) if total_ingresos > 0 else 0.0
+        
+        # Ticket promedio por gasto
+        ticket_promedio = (total_gastos / conteo_gastos) if conteo_gastos > 0 else 0.0
+
+        # Mayor categoría de gasto
+        top_cat = "-"
+        if gastos_por_categoria:
+            top_cat = max(gastos_por_categoria, key=gastos_por_categoria.get)
+
+        # Desglose ordenado de mayor a menor gasto con porcentaje
+        desglose = []
+        for cat, monto in sorted(gastos_por_categoria.items(), key=lambda item: item[1], reverse=True):
+            pct = (monto / total_gastos * 100) if total_gastos > 0 else 0
+            desglose.append({
+                "categoria": cat,
+                "monto": f"${monto:,.0f}",
+                "porcentaje": f"{pct:.1f}%"
+            })
 
         return jsonify({
             "status": "success",
             "ingresos": f"${total_ingresos:,.0f}",
             "gastos": f"${total_gastos:,.0f}",
-            "balance": f"${balance_real:,.0f}"
+            "balance": f"${balance_real:,.0f}",
+            "tasa_ahorro": f"{tasa_ahorro:.1f}%",
+            "ticket_promedio": f"${ticket_promedio:,.0f}",
+            "top_categoria": top_cat,
+            "desglose": desglose
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
