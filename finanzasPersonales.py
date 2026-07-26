@@ -20,7 +20,16 @@ MESES = {
     9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
 }
 
+# CACHÉ GLOBAL DE LA CONEXIÓN A GOOGLE SHEETS
+SESSIONS_CACHE = {
+    "client": None,
+    "doc": None
+}
+
 def conectar_google_sheets():
+    if SESSIONS_CACHE["doc"]:
+        return SESSIONS_CACHE["doc"]
+
     json_env = os.environ.get('GOOGLE_CREDS_JSON')
     if json_env:
         info_creds = json.loads(json_env)
@@ -30,7 +39,11 @@ def conectar_google_sheets():
         cliente = gspread.service_account(filename=ruta_creds)
 
     SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
-    return cliente.open_by_key(SPREADSHEET_ID)
+    doc = cliente.open_by_key(SPREADSHEET_ID)
+    
+    SESSIONS_CACHE["client"] = cliente
+    SESSIONS_CACHE["doc"] = doc
+    return doc
 
 def requiere_pin(f):
     @wraps(f)
@@ -42,12 +55,10 @@ def requiere_pin(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def detectar_categoria(hoja_cat, concepto_ingresado):
+def detectar_categoria(registros_cat, concepto_ingresado):
     try:
-        registros = hoja_cat.get_all_records()
         concepto_lower = concepto_ingresado.lower().strip()
-        
-        for fila in registros:
+        for fila in registros_cat:
             palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
             if palabra_clave and palabra_clave in concepto_lower:
                 return fila.get('Categoria', 'Varios'), fila.get('Tipo', 'Pasivo')
@@ -108,23 +119,20 @@ def registrar_gasto():
             tipo = tipo_ingresado
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
-            categoria, tipo = detectar_categoria(hoja_categorias, concepto)
+            registros_cat = hoja_categorias.get_all_records()
+            categoria, tipo = detectar_categoria(registros_cat, concepto)
             if not tipo: 
                 tipo = tipo_ingresado
 
             if not categoria:
-                cat_records = hoja_categorias.col_values(2)[1:]
-                categorias_unicas = sorted(list(set([c for c in cat_records if c.strip()])))
-                
-                if not categorias_unicas:
-                    categorias_unicas = ["Sueldo", "Alimentación", "Servicios", "Transporte", "Ventas", "Varios"]
+                cat_existentes = set([str(r.get('Categoria', '')).strip() for r in registros_cat if str(r.get('Categoria', '')).strip()])
+                categorias_unicas = sorted(list(cat_existentes)) if cat_existentes else ["Sueldo", "Alimentación", "Servicios", "Transporte", "Ventas", "Varios"]
                 
                 return jsonify({
                     "status": "needs_category",
                     "categorias": categorias_unicas
                 })
 
-        # Inserta fila incluyendo columna Moneda entre Monto y Categoría
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible])
 
         return jsonify({
@@ -136,6 +144,8 @@ def registrar_gasto():
 
     except Exception as e:
         traceback.print_exc()
+        # Resetear sesión en caso de error de socket/red expirable
+        SESSIONS_CACHE["doc"] = None
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/obtener_metricas', methods=['GET'])
@@ -201,7 +211,7 @@ def obtener_metricas():
                         gastos_por_categoria[cat]['UYU'] += monto
                         if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
 
-        # Cálculos Balance Banco
+        # Balance
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
 
@@ -213,21 +223,20 @@ def obtener_metricas():
             disponible_hoy_usd = max(0.0, balance_real_usd / dias_restantes)
             disponible_hoy_uyu = max(0.0, balance_real_uyu / dias_restantes)
 
-        # Promedio Diario
+        # Promedio diario
         divisor_dias = max(1, ahora.day) if mes_solicitado == mes_actual_nombre else 30
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
 
-        # Tasa de Ahorro independiente
+        # Tasa de Ahorro
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Mayor categoría
+        # Categoria más alta
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
 
-        # Desglose de categorías
         desglose = []
         for cat, montos in sorted(gastos_por_categoria.items(), key=lambda item: (item[1]['USD'] * 40) + item[1]['UYU'], reverse=True):
             if montos['USD'] > 0 or montos['UYU'] > 0:
@@ -264,6 +273,7 @@ def obtener_metricas():
 
     except Exception as e:
         traceback.print_exc()
+        SESSIONS_CACHE["doc"] = None
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':

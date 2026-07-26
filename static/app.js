@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
+    let necesitaRecargarMetricas = true; // Control de caché visual
 
     checkAutenticacion();
 
@@ -128,15 +129,13 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarVista(vistaMetricas);
         activarMenu(menuMetricas);
         toggleMenu();
-        cargarMetricas();
+        if (necesitaRecargarMetricas) {
+            cargarMetricas();
+        }
     });
 
     selectMesFiltro.addEventListener('change', () => {
-        cargarMetricas(selectMesFiltro.value);
-    });
-
-    document.getElementById('btnActualizarMetricas').addEventListener('click', () => {
-        cargarMetricas(selectMesFiltro.value);
+        cargarMetricas(selectMesFiltro.value, true);
     });
 
     function mostrarVista(vista) {
@@ -152,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    async function cargarMetricas(mesSeleccionado = '') {
+    async function cargarMetricas(mesSeleccionado = '', forzar = false) {
         try {
             const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
             const res = await fetch(url);
@@ -160,6 +159,8 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
+                necesitaRecargarMetricas = false; // Métricas al día
+
                 // Disponible hoy
                 document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
@@ -191,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Mayor categoría
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
-                // Actualizar desplegable de meses
+                // Desplegable de meses
                 selectMesFiltro.innerHTML = '';
                 data.meses_disponibles.forEach(mes => {
                     const opt = document.createElement('option');
@@ -207,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Renderizar desglose por categoría con igual peso para USD y UYU
+                // Desglose por categoría
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -277,6 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 form.reset();
                 chkPrescindible.checked = false;
                 gastoPendiente = null;
+                necesitaRecargarMetricas = true; // Forzar recarga de métricas en la próxima visita
             } else {
                 mostrarMensaje(`Error: ${data.message}`, 'error');
             }
