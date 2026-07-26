@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
+import os
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -13,14 +14,19 @@ MESES = {
 
 def conectar_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name('credenciales.json', scope)
+    
+    # Render guarda los Secret Files en /etc/secrets/
+    if os.path.exists('/etc/secrets/credenciales.json'):
+        ruta_creds = '/etc/secrets/credenciales.json'
+    else:
+        ruta_creds = 'credenciales.json'
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(ruta_creds, scope)
     cliente = gspread.authorize(creds)
-    # Nombre exacto de tu archivo
     spreadsheet = cliente.open("FinanzasPersonales_data")
     return spreadsheet
 
 def detectar_categoria(hoja_cat, concepto_ingresado):
-    """Busca palabras clave dentro de la hoja Categorias"""
     try:
         registros = hoja_cat.get_all_records()
         concepto_lower = concepto_ingresado.lower().strip()
@@ -55,30 +61,28 @@ def registrar_gasto():
         hoja_categorias = doc.worksheet("Categorias")
         hoja_resumen = doc.worksheet("Resumen")
 
-        # 1. Inteligencia: Categorizar automáticamente
+        # 1. Categorización automática
         categoria, tipo = detectar_categoria(hoja_categorias, concepto)
 
-        # 2. Guardar en pestaña Transacciones
-        # Columnas: Fecha, Hora, Concepto, Monto, Categoria, Mes
+        # 2. Guardar en Transacciones
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes])
 
-        # 3. Actualizar la pestaña Resumen si el concepto está listado allí
+        # 3. Actualizar Resumen (si el concepto coincide)
         try:
-            conceptos_resumen = hoja_resumen.col_values(2) # Columna B (CONCEPTO)
-            encabezados = hoja_resumen.row_values(1)       # Fila 1 (Meses)
+            conceptos_resumen = hoja_resumen.col_values(2)
+            encabezados = hoja_resumen.row_values(1)
 
             if concepto.upper() in [c.upper() for c in conceptos_resumen] and nombre_mes in encabezados:
                 fila_idx = [c.upper() for c in conceptos_resumen].index(concepto.upper()) + 1
                 col_idx = encabezados.index(nombre_mes) + 1
 
-                # Leer valor actual y sumar el nuevo monto
                 val_actual = hoja_resumen.cell(fila_idx, col_idx).value or "$0"
                 num_actual = float(str(val_actual).replace('$', '').replace('.', '').replace(',', '.').strip() or 0)
                 nuevo_monto = num_actual + monto
 
                 hoja_resumen.update_cell(fila_idx, col_idx, f"${nuevo_monto:,.0f}")
         except Exception as err_resumen:
-            print(f"Aviso: No se actualizó Resumen (concepto no fijo o formato distinto): {err_resumen}")
+            print(f"Aviso en Resumen: {err_resumen}")
 
         return jsonify({
             "status": "success",
