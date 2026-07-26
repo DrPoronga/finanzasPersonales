@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblIngresos').textContent = data.ingresos;
                 document.getElementById('lblGastos').textContent = data.gastos;
                 document.getElementById('lblTasaAhorro').textContent = data.tasa_ahorro;
-                document.getElementById('lblTicketPromedio').textContent = data.ticket_promedio;
+                document.getElementById('lblGastoDiario').textContent = data.gasto_diario;
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
                 // Renderizar desglose por categoría

@@ -148,7 +148,7 @@ def obtener_metricas():
             "gastos": f"${total_gastos:,.0f}",
             "balance": f"${balance_real:,.0f}",
             "tasa_ahorro": f"{tasa_ahorro:.1f}%",
-            "ticket_promedio": f"${ticket_promedio:,.0f}",
+            "gasto_diario": f"${gasto_diario:,.0f}",
             "top_categoria": top_cat,
             "desglose": desglose
         })
