@@ -44,7 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
-    let necesitaRecargarMetricas = true; // Control de caché visual
+    let necesitaRecargarMetricas = true;
 
     checkAutenticacion();
 
@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     selectMesFiltro.addEventListener('change', () => {
-        cargarMetricas(selectMesFiltro.value, true);
+        cargarMetricas(selectMesFiltro.value);
     });
 
     function mostrarVista(vista) {
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    async function cargarMetricas(mesSeleccionado = '', forzar = false) {
+    async function cargarMetricas(mesSeleccionado = '') {
         try {
             const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
             const res = await fetch(url);
@@ -159,17 +159,17 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
-                necesitaRecargarMetricas = false; // Métricas al día
+                necesitaRecargarMetricas = false;
 
-                // Disponible hoy
+                // Disponible Hoy
                 document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
 
-                // Dinero en el banco
+                // Banco
                 document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
                 document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
 
-                // Prescindibles
+                // Prescindible
                 document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
                 document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
 
@@ -181,15 +181,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
                 document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
 
-                // Promedio diario
+                // Promedio Diario
                 document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
                 document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
 
-                // Tasa de ahorro
+                // Tasa Ahorro
                 document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
                 document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
 
-                // Mayor categoría
+                // Top Categoria
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
                 // Desplegable de meses
@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Desglose por categoría
+                // Desglose
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -278,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 form.reset();
                 chkPrescindible.checked = false;
                 gastoPendiente = null;
-                necesitaRecargarMetricas = true; // Forzar recarga de métricas en la próxima visita
+                necesitaRecargarMetricas = true;
             } else {
                 mostrarMensaje(`Error: ${data.message}`, 'error');
             }

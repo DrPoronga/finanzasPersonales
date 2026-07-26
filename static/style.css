@@ -6,10 +6,12 @@
     --text: #171717;
     --border: #E5E5E5;
     --subtext: #737373;
+    --badge-bg: #F4F4F5;
+    --badge-text: #52525B;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
     background-color: var(--bg);
     color: var(--text);
     margin: 0;
@@ -18,6 +20,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
 .navbar {
@@ -96,24 +99,24 @@ body {
 
 .container {
     width: 100%;
-    max-width: 400px;
-    padding: 80px 20px 40px 20px;
+    max-width: 420px;
+    padding: 70px 18px 40px 18px;
     box-sizing: border-box;
 }
 
 .form-group {
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
 input, select {
     width: 100%;
-    padding: 18px 20px;
+    padding: 16px 18px;
     border: 1px solid var(--border);
     border-radius: 12px;
     box-sizing: border-box;
-    font-size: 18px;
+    font-size: 17px;
     background: var(--surface);
-    transition: border 0.3s;
+    transition: border 0.2s;
 }
 
 input:focus, select:focus {
@@ -123,14 +126,13 @@ input:focus, select:focus {
 
 button {
     width: 100%;
-    padding: 28px 15px;
+    padding: 22px 15px;
     background-color: var(--primary);
     color: white;
     border: none;
     border-radius: 12px;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    letter-spacing: 0.5px;
     cursor: pointer;
     transition: background-color 0.2s;
 }
@@ -143,8 +145,8 @@ button:hover {
     background-color: transparent;
     color: var(--text);
     border: 1px solid var(--border);
-    padding: 18px 15px;
-    font-size: 16px;
+    padding: 16px 15px;
+    font-size: 15px;
 }
 
 .btn-secondary:hover {
@@ -154,8 +156,8 @@ button:hover {
 .hidden { display: none !important; }
 
 #mensaje {
-    margin-top: 25px;
-    padding: 18px;
+    margin-top: 20px;
+    padding: 16px;
     border-radius: 12px;
     text-align: center;
     font-weight: 500;
@@ -163,14 +165,66 @@ button:hover {
 .success { background-color: var(--primary); color: white; }
 .error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
-/* SECCIÓN MÉTRICAS */
+/* SECCIÓN MÉTRICAS Y TARJETAS RESTRUCTURADAS */
 .filtro-mes-group select {
     font-weight: 600;
-    text-align: center;
-    border-color: var(--primary);
+    text-align: left;
+    border-color: var(--border);
     background-color: var(--surface);
 }
 
+/* ESTILO BASE DE TARJETA (ALINEADO A LA IZQUIERDA) */
+.card {
+    background: var(--surface);
+    padding: 18px 20px;
+    border-radius: 16px;
+    text-align: left;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.card h3, .card h4 {
+    margin: 0 0 12px 0;
+    font-weight: 600;
+    color: var(--subtext);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+/* REGISTROS BIMONEDA DENTRO DE LAS TARJETAS */
+.monto-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.monto-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.monto-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+}
+
+/* ETIQUETA / BADGE MONEDA */
+.badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 7px;
+    border-radius: 6px;
+    background: var(--badge-bg);
+    color: var(--badge-text);
+    letter-spacing: 0.5px;
+}
+
+/* TARJETA DESTACADA DISPONIBLE HOY (OSCURA) */
 .disponible-card {
     background: var(--primary);
     color: white;
@@ -181,92 +235,56 @@ button:hover {
     color: #A3A3A3;
 }
 
-.card {
-    background: var(--surface);
-    padding: 22px 20px;
-    border-radius: 12px;
-    text-align: center;
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-}
-
-.card h3, .card h4 {
-    margin: 0 0 8px 0;
-    font-weight: 400;
-    color: var(--subtext);
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* FORMATO DUAL DE DÓLARES Y PESOS */
-.monto-dual {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.monto-linea {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-}
-
-.monto-valor {
-    font-size: 26px;
-    font-weight: 600;
-}
-
-.disponible-card .monto-valor {
+.disponible-card .monto-num {
     color: white;
 }
 
-.monto-moneda {
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--subtext);
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(0, 0, 0, 0.05);
+.disponible-card .badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: #FFFFFF;
 }
 
-.disponible-card .monto-moneda {
-    color: #A3A3A3;
-    background: rgba(255, 255, 255, 0.1);
-}
-
+/* GRID COMPACTO BIMONEDA */
 .metricas-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-bottom: 12px;
 }
 
-.metricas-grid span {
-    font-size: 20px;
+.monto-group-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.monto-row-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.monto-row-compact .val {
+    font-size: 15px;
     font-weight: 600;
     color: var(--text);
 }
 
-.desglose-card {
-    text-align: left;
+.top-cat-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
 }
 
+/* DESGLOSE POR CATEGORÍA */
 .desglose-card h4 {
     margin-bottom: 15px;
-    font-size: 14px;
-    text-transform: uppercase;
-    color: var(--subtext);
 }
 
 .desglose-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0;
+    padding: 12px 0;
     border-bottom: 1px solid var(--border);
     font-size: 15px;
 }
@@ -291,6 +309,7 @@ button:hover {
     font-size: 14px;
 }
 
+/* MODAL Y PIN */
 .modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.4);
@@ -303,7 +322,7 @@ button:hover {
 }
 .modal-content h2 { margin-top: 0; font-weight: 500; }
 .modal-content select { margin: 20px 0; }
-.modal-content button { margin-bottom: 10px; padding: 18px; }
+.modal-content button { margin-bottom: 10px; padding: 16px; }
 
 .pin-screen {
     position: fixed;
@@ -324,7 +343,7 @@ button:hover {
 }
 
 .pin-box p {
-    font-size: 16px;
+    font-size: 14px;
     color: var(--subtext);
     margin-bottom: 25px;
     letter-spacing: 0.5px;
@@ -339,27 +358,22 @@ button:hover {
 }
 
 .checkbox-group {
-    margin-bottom: 25px;
+    margin-bottom: 20px;
 }
 
 .checkbox-label {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     color: var(--subtext);
     user-select: none;
 }
 
 .checkbox-label input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
-    margin-right: 12px;
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
     accent-color: var(--primary);
     cursor: pointer;
-}
-
-.prescindible-card {
-    border: 1px dashed var(--subtext);
-    background: #F5F5F5;
 }

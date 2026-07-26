@@ -20,7 +20,6 @@ MESES = {
     9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
 }
 
-# CACHÉ GLOBAL DE LA CONEXIÓN A GOOGLE SHEETS
 SESSIONS_CACHE = {
     "client": None,
     "doc": None
@@ -144,7 +143,6 @@ def registrar_gasto():
 
     except Exception as e:
         traceback.print_exc()
-        # Resetear sesión en caso de error de socket/red expirable
         SESSIONS_CACHE["doc"] = None
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -160,7 +158,7 @@ def obtener_metricas():
         mes_actual_nombre = MESES[ahora.month]
         mes_solicitado = request.args.get('mes', mes_actual_nombre).upper().strip()
 
-        # Totales acumulados históricos (Banco)
+        # Acumulados Históricos (Banco)
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
 
@@ -182,7 +180,7 @@ def obtener_metricas():
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
-            # 1. Banco (Histórico Acumulado)
+            # Acumulado total
             if moneda == 'USD':
                 if tipo == 'Activo': ingresos_acum_usd += monto
                 else: gastos_acum_usd += monto
@@ -190,7 +188,7 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_acum_uyu += monto
                 else: gastos_acum_uyu += monto
 
-            # 2. Filtrado por Mes
+            # Filtro por mes
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
                 if cat not in gastos_por_categoria:
@@ -211,7 +209,6 @@ def obtener_metricas():
                         gastos_por_categoria[cat]['UYU'] += monto
                         if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
 
-        # Balance
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
 
@@ -223,16 +220,16 @@ def obtener_metricas():
             disponible_hoy_usd = max(0.0, balance_real_usd / dias_restantes)
             disponible_hoy_uyu = max(0.0, balance_real_uyu / dias_restantes)
 
-        # Promedio diario
+        # Promedio Diario
         divisor_dias = max(1, ahora.day) if mes_solicitado == mes_actual_nombre else 30
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
 
-        # Tasa de Ahorro
+        # Tasa Ahorro
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Categoria más alta
+        # Mayor Categoria
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
