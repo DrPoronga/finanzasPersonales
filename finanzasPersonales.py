@@ -8,11 +8,9 @@ import gspread
 
 app = Flask(__name__)
 
-# Clave secreta para encriptar la sesión en el navegador
 app.secret_key = os.environ.get('SECRET_KEY', 'finanzas_secret_key_2026_super_segura')
 app.permanent_session_lifetime = timedelta(days=31)
 
-# PIN de acceso (Por defecto 1234, configurable en Render)
 PIN_CORRECTO = str(os.environ.get('APP_PIN', '4372736')).strip()
 
 MESES = {
@@ -33,12 +31,10 @@ def conectar_google_sheets():
     SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
     return cliente.open_by_key(SPREADSHEET_ID)
 
-# --- DECORADOR DE SEGURIDAD ---
 def requiere_pin(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         mes_actual = datetime.now().month
-        # Verifica que esté autenticado y que corresponda al mes actual
         if not session.get('autenticado') or session.get('auth_month') != mes_actual:
             session.clear()
             return jsonify({"status": "unauthorized", "message": "PIN requerido"}), 401
@@ -63,7 +59,6 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
 def home():
     return render_template('index.html')
 
-# --- RUTAS DE AUTENTICACIÓN POR PIN ---
 @app.route('/verificar_pin', methods=['POST'])
 def verificar_pin():
     datos = request.get_json()
@@ -72,7 +67,7 @@ def verificar_pin():
     if pin_ingresado == PIN_CORRECTO:
         session.permanent = True
         session['autenticado'] = True
-        session['auth_month'] = datetime.now().month  # Guardamos el mes actual
+        session['auth_month'] = datetime.now().month
         return jsonify({"status": "success"})
     
     return jsonify({"status": "error", "message": "PIN incorrecto"}), 401
@@ -87,7 +82,6 @@ def check_auth():
     return jsonify({"status": "unauthenticated"}), 401
 
 
-# --- RUTAS PROTEGIDAS ---
 @app.route('/registrar_gasto', methods=['POST'])
 @requiere_pin
 def registrar_gasto():
@@ -95,6 +89,7 @@ def registrar_gasto():
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
     tipo_ingresado = datos.get('tipo', 'Pasivo')
+    prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
 
     ahora = datetime.now()
@@ -128,7 +123,8 @@ def registrar_gasto():
                     "categorias": categorias_unicas
                 })
 
-        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo])
+        # Guardamos 8 columnas en Transacciones (incluyendo Prescindible)
+        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo, prescindible])
 
         return jsonify({
             "status": "success",
@@ -151,6 +147,7 @@ def obtener_metricas():
 
         total_ingresos = 0.0
         total_gastos = 0.0
+        total_prescindible = 0.0
         conteo_gastos = 0
         gastos_por_categoria = {}
 
@@ -158,6 +155,7 @@ def obtener_metricas():
             monto = float(r.get('Monto', 0) or 0)
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
+            presc = str(r.get('Prescindible', '')).strip().capitalize()
 
             if tipo == 'Activo':
                 total_ingresos += monto
@@ -165,6 +163,9 @@ def obtener_metricas():
                 total_gastos += monto
                 conteo_gastos += 1
                 gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
+
+                if presc in ['Sí', 'Si', 'True']:
+                    total_prescindible += monto
 
         balance_real = total_ingresos - total_gastos
         tasa_ahorro = ((total_ingresos - total_gastos) / total_ingresos * 100) if total_ingresos > 0 else 0.0
@@ -190,6 +191,7 @@ def obtener_metricas():
             "ingresos": f"${total_ingresos:,.0f}",
             "gastos": f"${total_gastos:,.0f}",
             "balance": f"${balance_real:,.0f}",
+            "prescindible": f"${total_prescindible:,.0f}",
             "tasa_ahorro": f"{tasa_ahorro:.1f}%",
             "gasto_diario": f"${gasto_diario:,.0f}",
             "top_categoria": top_cat,

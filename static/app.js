@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Pantalla PIN
+    // PIN
     const pantallaPin = document.getElementById('pantallaPin');
     const contenidoApp = document.getElementById('contenidoApp');
     const formPin = document.getElementById('formPin');
@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnPin = document.getElementById('btnPin');
     const mensajePin = document.getElementById('mensajePin');
 
-    // Elementos App
+    // Menú
     const btnMenu = document.getElementById('btnMenu');
     const btnCloseMenu = document.getElementById('btnCloseMenu');
     const sideMenu = document.getElementById('sideMenu');
@@ -20,12 +20,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const vistaFormulario = document.getElementById('vistaFormulario');
     const vistaMetricas = document.getElementById('vistaMetricas');
 
+    // Formulario
     const form = document.getElementById('registroForm');
     const conceptoInput = document.getElementById('concepto');
     const montoInput = document.getElementById('monto');
+    const chkPrescindible = document.getElementById('chkPrescindible');
+    const containerPrescindible = document.getElementById('containerPrescindible');
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
 
+    // Modal
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
     const selectCategoria = document.getElementById('selectCategoria');
@@ -37,20 +41,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
 
-    // --- 1. VERIFICAR AUTENTICACIÓN AL CARGAR ---
     checkAutenticacion();
 
     async function checkAutenticacion() {
         try {
             const res = await fetch('/check_auth');
-            if (res.ok) {
-                desbloquearApp();
-            } else {
-                bloquearApp();
-            }
-        } catch (e) {
-            bloquearApp();
-        }
+            if (res.ok) { desbloquearApp(); } else { bloquearApp(); }
+        } catch (e) { bloquearApp(); }
     }
 
     function desbloquearApp() {
@@ -78,11 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ pin })
             });
 
-            if (res.ok) {
-                desbloquearApp();
-            } else {
-                mostrarMensajePin("PIN incorrecto");
-            }
+            if (res.ok) { desbloquearApp(); } else { mostrarMensajePin("PIN incorrecto"); }
         } catch (e) {
             mostrarMensajePin("Error de conexión");
         } finally {
@@ -97,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => { mensajePin.className = 'hidden'; }, 3000);
     }
 
-    // --- 2. NAV Y MENÚ LATERAL ---
     function toggleMenu() {
         sideMenu.classList.toggle('hidden');
         overlay.classList.toggle('hidden');
@@ -111,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         tipoActual = "Pasivo";
         btnSubmit.textContent = "Registrar Gasto";
+        containerPrescindible.classList.remove('hidden'); // Mostrar checkbox en gastos
         mostrarVista(vistaFormulario);
         activarMenu(menuGasto);
         toggleMenu();
@@ -120,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         tipoActual = "Activo";
         btnSubmit.textContent = "Registrar Ingreso";
+        containerPrescindible.classList.add('hidden'); // Ocultar checkbox en ingresos
         mostrarVista(vistaFormulario);
         activarMenu(menuIngreso);
         toggleMenu();
@@ -148,7 +142,6 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    // --- 3. CARGAR MÉTRICAS ---
     async function cargarMetricas() {
         try {
             const res = await fetch('/obtener_metricas');
@@ -157,6 +150,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             if (data.status === 'success') {
                 document.getElementById('lblBalance').textContent = data.balance;
+                document.getElementById('lblPrescindible').textContent = data.prescindible;
                 document.getElementById('lblIngresos').textContent = data.ingresos;
                 document.getElementById('lblGastos').textContent = data.gastos;
                 document.getElementById('lblTasaAhorro').textContent = data.tasa_ahorro;
@@ -188,15 +182,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 4. ENVIAR MOVIMIENTO ---
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
         const monto = parseFloat(montoInput.value);
+        const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
-        gastoPendiente = { concepto, monto, tipo: tipoActual };
+        gastoPendiente = { concepto, monto, tipo: tipoActual, prescindible };
         enviarMovimiento(gastoPendiente);
     });
 
@@ -221,6 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (data.status === 'success') {
                 mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
+                chkPrescindible.checked = false;
                 gastoPendiente = null;
             } else {
                 mostrarMensaje(`Error: ${data.message}`, 'error');
@@ -235,7 +230,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- 5. MODAL ---
     function abrirModal(concepto, categoriasDisponibles) {
         conceptoModal.textContent = concepto;
         selectCategoria.innerHTML = '';

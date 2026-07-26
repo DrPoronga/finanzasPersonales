@@ -20,15 +20,13 @@
         </div>
     </div>
 
-    <!-- CONTENIDO PRINCIPAL (Oculto hasta validar PIN) -->
+    <!-- CONTENIDO PRINCIPAL -->
     <div id="contenidoApp" class="hidden">
         
-        <!-- MENÚ ANCLADO EN ESQUINA -->
         <header class="navbar">
             <button id="btnMenu" class="hamburger-btn">☰</button>
         </header>
 
-        <!-- MENÚ LATERAL -->
         <nav id="sideMenu" class="side-menu hidden">
             <button id="btnCloseMenu" class="close-btn">&times;</button>
             <ul>
@@ -41,7 +39,7 @@
 
         <div class="container">
             
-            <!-- VISTA PRINCIPAL: FORMULARIO ÚNICO -->
+            <!-- VISTA PRINCIPAL -->
             <section id="vistaFormulario">
                 <form id="registroForm">
                     <div class="form-group">
@@ -50,6 +48,14 @@
                     
                     <div class="form-group">
                         <input type="number" id="monto" placeholder="Monto" required>
+                    </div>
+
+                    <!-- NUEVA CASILLA: GASTO PRESCINDIBLE -->
+                    <div id="containerPrescindible" class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="chkPrescindible">
+                            <span>¿Es un gasto prescindible?</span>
+                        </label>
                     </div>
                     
                     <button type="submit" id="btnSubmit">Registrar Gasto</button>
@@ -61,6 +67,12 @@
                 <div class="card balance-card">
                     <h3>Balance Real</h3>
                     <span id="lblBalance" class="monto-destacado">$0</span>
+                </div>
+
+                <!-- TARJETA DESTACADA: DINERO PRESCINDIBLE -->
+                <div class="card prescindible-card">
+                    <h3>Gastos Prescindibles</h3>
+                    <span id="lblPrescindible" class="monto-destacado">$0</span>
                 </div>
 
                 <div class="metricas-grid">
@@ -101,7 +113,7 @@
             <div id="mensaje" class="hidden"></div>
         </div>
 
-        <!-- MODAL CLASIFICAR -->
+        <!-- MODAL -->
         <div id="modalCategoria" class="modal hidden">
             <div class="modal-content">
                 <h2>Clasificar</h2>
