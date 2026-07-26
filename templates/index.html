@@ -50,7 +50,6 @@
                         <input type="number" id="monto" placeholder="Monto" required>
                     </div>
 
-                    <!-- NUEVA CASILLA: GASTO PRESCINDIBLE -->
                     <div id="containerPrescindible" class="form-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="chkPrescindible">
@@ -64,14 +63,25 @@
 
             <!-- VISTA MÉTRICAS -->
             <section id="vistaMetricas" class="hidden">
+                
+                <!-- FILTRO DE MESES -->
+                <div class="form-group filtro-mes-group">
+                    <select id="selectMesFiltro"></select>
+                </div>
+
+                <!-- TARJETA DESTACADA: DISPONIBLE HOY -->
+                <div class="card disponible-card">
+                    <h3>Disponible para hoy</h3>
+                    <span id="lblDisponibleHoy" class="monto-destacado">$0</span>
+                </div>
+
                 <div class="card balance-card">
                     <h3>Dinero en el banco</h3>
                     <span id="lblBalance" class="monto-destacado">$0</span>
                 </div>
 
-                <!-- TARJETA DESTACADA: DINERO PRESCINDIBLE -->
                 <div class="card prescindible-card">
-                    <h3>Gastos que podria haber ahorrado</h3>
+                    <h3>Gastos que podría haber ahorrado</h3>
                     <span id="lblPrescindible" class="monto-destacado">$0</span>
                 </div>
 

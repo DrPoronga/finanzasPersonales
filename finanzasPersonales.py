@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, session
 from datetime import datetime, timedelta
 from functools import wraps
+import calendar
 import os
 import json
 import traceback
@@ -81,7 +82,6 @@ def check_auth():
     session.clear()
     return jsonify({"status": "unauthenticated"}), 401
 
-
 @app.route('/registrar_gasto', methods=['POST'])
 @requiere_pin
 def registrar_gasto():
@@ -123,7 +123,6 @@ def registrar_gasto():
                     "categorias": categorias_unicas
                 })
 
-        # Guardamos 8 columnas en Transacciones (incluyendo Prescindible)
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo, prescindible])
 
         return jsonify({
@@ -145,33 +144,69 @@ def obtener_metricas():
         hoja_transacciones = doc.worksheet("Transacciones")
         registros = hoja_transacciones.get_all_records()
 
-        total_ingresos = 0.0
-        total_gastos = 0.0
-        total_prescindible = 0.0
-        conteo_gastos = 0
+        ahora = datetime.now()
+        mes_actual_nombre = MESES[ahora.month]
+        mes_solicitado = request.args.get('mes', mes_actual_nombre).upper().strip()
+
+        total_ingresos_acumulado = 0.0
+        total_gastos_acumulado = 0.0
+
+        total_ingresos_filtrado = 0.0
+        total_gastos_filtrado = 0.0
+        total_prescindible_filtrado = 0.0
+        conteo_gastos_filtrado = 0
         gastos_por_categoria = {}
+
+        meses_encontrados = set()
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
             presc = str(r.get('Prescindible', '')).strip().capitalize()
+            mes_registro = str(r.get('Mes', '')).strip().upper()
 
+            if mes_registro:
+                meses_encontrados.add(mes_registro)
+
+            # Acumulado total para saber Dinero Real en el banco
             if tipo == 'Activo':
-                total_ingresos += monto
+                total_ingresos_acumulado += monto
             else:
-                total_gastos += monto
-                conteo_gastos += 1
-                gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
+                total_gastos_acumulado += monto
 
-                if presc in ['Sí', 'Si', 'True']:
-                    total_prescindible += monto
+            # Filtro para el mes seleccionado
+            es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
+            if es_mes_valido:
+                if tipo == 'Activo':
+                    total_ingresos_filtrado += monto
+                else:
+                    total_gastos_filtrado += monto
+                    conteo_gastos_filtrado += 1
+                    gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
 
-        balance_real = total_ingresos - total_gastos
-        tasa_ahorro = ((total_ingresos - total_gastos) / total_ingresos * 100) if total_ingresos > 0 else 0.0
-        
-        dia_actual = datetime.now().day
-        gasto_diario = (total_gastos / dia_actual) if dia_actual > 0 else 0.0
+                    if presc in ['Sí', 'Si', 'True']:
+                        total_prescindible_filtrado += monto
+
+        balance_real = total_ingresos_acumulado - total_gastos_acumulado
+
+        # Cálculo de Disponible para Hoy (solo aplica si estamos viendo el mes actual)
+        disponible_hoy_num = 0.0
+        if mes_solicitado == mes_actual_nombre:
+            dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
+            dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
+            disponible_hoy_num = max(0.0, balance_real / dias_restantes)
+
+        # Promedio Diario del mes seleccionado
+        if mes_solicitado == mes_actual_nombre:
+            divisor_dias = max(1, ahora.day)
+        elif mes_solicitado == "TODOS":
+            divisor_dias = 30
+        else:
+            divisor_dias = 30 # Para meses pasados completos
+        gasto_diario_num = (total_gastos_filtrado / divisor_dias) if divisor_dias > 0 else 0.0
+
+        tasa_ahorro = ((total_ingresos_filtrado - total_gastos_filtrado) / total_ingresos_filtrado * 100) if total_ingresos_filtrado > 0 else 0.0
 
         top_cat = "-"
         if gastos_por_categoria:
@@ -179,25 +214,32 @@ def obtener_metricas():
 
         desglose = []
         for cat, monto in sorted(gastos_por_categoria.items(), key=lambda item: item[1], reverse=True):
-            pct = (monto / total_gastos * 100) if total_gastos > 0 else 0
+            pct = (monto / total_gastos_filtrado * 100) if total_gastos_filtrado > 0 else 0
             desglose.append({
                 "categoria": cat,
                 "monto": f"${monto:,.0f}",
                 "porcentaje": f"{pct:.1f}%"
             })
 
+        lista_meses = list(MESES.values())
+        meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
+
         return jsonify({
             "status": "success",
-            "ingresos": f"${total_ingresos:,.0f}",
-            "gastos": f"${total_gastos:,.0f}",
+            "mes_actual": mes_solicitado,
+            "meses_disponibles": meses_ordenados,
+            "disponible_hoy": f"${disponible_hoy_num:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
             "balance": f"${balance_real:,.0f}",
-            "prescindible": f"${total_prescindible:,.0f}",
+            "ingresos": f"${total_ingresos_filtrado:,.0f}",
+            "gastos": f"${total_gastos_filtrado:,.0f}",
+            "prescindible": f"${total_prescindible_filtrado:,.0f}",
             "tasa_ahorro": f"{tasa_ahorro:.1f}%",
-            "gasto_diario": f"${gasto_diario:,.0f}",
+            "gasto_diario": f"${gasto_diario_num:,.0f}",
             "top_categoria": top_cat,
             "desglose": desglose
         })
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':

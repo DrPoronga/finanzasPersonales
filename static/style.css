@@ -20,7 +20,6 @@ body {
     min-height: 100vh;
 }
 
-/* MENÚ ANCLADO EN LA ESQUINA SUPERIOR IZQUIERDA */
 .navbar {
     position: fixed;
     top: 20px;
@@ -38,7 +37,6 @@ body {
     margin: 0;
 }
 
-/* MENÚ LATERAL */
 .side-menu {
     position: fixed;
     top: 0;
@@ -96,7 +94,6 @@ body {
     z-index: 999;
 }
 
-/* CONTENEDOR PRINCIPAL */
 .container {
     width: 100%;
     max-width: 400px;
@@ -108,7 +105,6 @@ body {
     margin-bottom: 25px;
 }
 
-/* INPUTS ELEGANTES */
 input, select {
     width: 100%;
     padding: 18px 20px;
@@ -125,7 +121,6 @@ input:focus, select:focus {
     border-color: var(--primary);
 }
 
-/* BOTÓN EL DOBLE DE ALTO */
 button {
     width: 100%;
     padding: 28px 15px;
@@ -168,7 +163,28 @@ button:hover {
 .success { background-color: var(--primary); color: white; }
 .error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
-/* SECCIÓN MÉTRICAS AVANZADAS */
+/* SECCIÓN MÉTRICAS */
+.filtro-mes-group select {
+    font-weight: 600;
+    text-align: center;
+    border-color: var(--primary);
+    background-color: var(--surface);
+}
+
+.disponible-card {
+    background: var(--primary);
+    color: white;
+    border: none;
+}
+
+.disponible-card h3 {
+    color: #A3A3A3;
+}
+
+.disponible-card .monto-destacado {
+    color: white;
+}
+
 .card {
     background: var(--surface);
     padding: 22px 20px;
@@ -206,7 +222,6 @@ button:hover {
     color: var(--text);
 }
 
-/* LISTA DE DESGLOSE POR CATEGORÍA */
 .desglose-card {
     text-align: left;
 }
@@ -249,7 +264,6 @@ button:hover {
     margin-left: 6px;
 }
 
-/* MODAL SERIO */
 .modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.4);
@@ -264,7 +278,6 @@ button:hover {
 .modal-content select { margin: 20px 0; }
 .modal-content button { margin-bottom: 10px; padding: 18px; }
 
-/* PANTALLA DE DESBLOQUEO POR PIN */
 .pin-screen {
     position: fixed;
     top: 0; left: 0;
@@ -297,7 +310,7 @@ button:hover {
     font-size: 24px;
     margin-bottom: 15px;
 }
-/* CHECKBOX MINIMALISTA Y ELEGANTE */
+
 .checkbox-group {
     margin-bottom: 25px;
 }
@@ -319,7 +332,6 @@ button:hover {
     cursor: pointer;
 }
 
-/* TARJETA DE GASTOS PRESCINDIBLES */
 .prescindible-card {
     border: 1px dashed var(--subtext);
     background: #F5F5F5;

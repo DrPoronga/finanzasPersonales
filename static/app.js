@@ -29,6 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
 
+    // Métricas
+    const selectMesFiltro = document.getElementById('selectMesFiltro');
+
     // Modal
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
@@ -103,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         tipoActual = "Pasivo";
         btnSubmit.textContent = "Registrar Gasto";
-        containerPrescindible.classList.remove('hidden'); // Mostrar checkbox en gastos
+        containerPrescindible.classList.remove('hidden');
         mostrarVista(vistaFormulario);
         activarMenu(menuGasto);
         toggleMenu();
@@ -113,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         tipoActual = "Activo";
         btnSubmit.textContent = "Registrar Ingreso";
-        containerPrescindible.classList.add('hidden'); // Ocultar checkbox en ingresos
+        containerPrescindible.classList.add('hidden');
         mostrarVista(vistaFormulario);
         activarMenu(menuIngreso);
         toggleMenu();
@@ -127,7 +130,13 @@ document.addEventListener("DOMContentLoaded", () => {
         cargarMetricas();
     });
 
-    document.getElementById('btnActualizarMetricas').addEventListener('click', cargarMetricas);
+    selectMesFiltro.addEventListener('change', () => {
+        cargarMetricas(selectMesFiltro.value);
+    });
+
+    document.getElementById('btnActualizarMetricas').addEventListener('click', () => {
+        cargarMetricas(selectMesFiltro.value);
+    });
 
     function mostrarVista(vista) {
         vistaFormulario.classList.add('hidden');
@@ -142,13 +151,15 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    async function cargarMetricas() {
+    async function cargarMetricas(mesSeleccionado = '') {
         try {
-            const res = await fetch('/obtener_metricas');
+            const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+            const res = await fetch(url);
             if (res.status === 401) { bloquearApp(); return; }
             
             const data = await res.json();
             if (data.status === 'success') {
+                document.getElementById('lblDisponibleHoy').textContent = data.disponible_hoy;
                 document.getElementById('lblBalance').textContent = data.balance;
                 document.getElementById('lblPrescindible').textContent = data.prescindible;
                 document.getElementById('lblIngresos').textContent = data.ingresos;
@@ -157,6 +168,25 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblGastoDiario').textContent = data.gasto_diario;
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
+                // Actualizar desplegable de meses sin perder selección
+                const mesActualFiltro = selectMesFiltro.value;
+                selectMesFiltro.innerHTML = '';
+
+                data.meses_disponibles.forEach(mes => {
+                    const opt = document.createElement('option');
+                    opt.value = mes;
+                    opt.textContent = mes;
+                    if (mes === data.mes_actual) opt.selected = true;
+                    selectMesFiltro.appendChild(opt);
+                });
+
+                const optTodos = document.createElement('option');
+                optTodos.value = "TODOS";
+                optTodos.textContent = "TODO EL HISTORIAL";
+                if (data.mes_actual === "TODOS") optTodos.selected = true;
+                selectMesFiltro.appendChild(optTodos);
+
+                // Renderizar desglose
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
