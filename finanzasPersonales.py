@@ -21,14 +21,16 @@ def conectar_google_sheets():
         info_creds = json.loads(json_env)
         cliente = gspread.service_account_from_dict(info_creds)
     else:
-        # 2. Si existe el Secret File en Render (/etc/secrets/credenciales.json) o local
+        # 2. Si existe el Secret File en Render o local
         ruta_creds = '/etc/secrets/credenciales.json' if os.path.exists('/etc/secrets/credenciales.json') else 'credenciales.json'
         cliente = gspread.service_account(filename=ruta_creds)
 
-    # Abre la planilla por su nombre exacto
-    spreadsheet = cliente.open("FinanzasPersonales_data")
+    # ID real de tu planilla extraído de tu URL
+    SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
+    
+    spreadsheet = cliente.open_by_key(SPREADSHEET_ID)
     return spreadsheet
-
+    
 def detectar_categoria(hoja_cat, concepto_ingresado):
     try:
         registros = hoja_cat.get_all_records()
