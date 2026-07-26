@@ -1,4 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // Pantalla PIN
+    const pantallaPin = document.getElementById('pantallaPin');
+    const contenidoApp = document.getElementById('contenidoApp');
+    const formPin = document.getElementById('formPin');
+    const inputPin = document.getElementById('inputPin');
+    const btnPin = document.getElementById('btnPin');
+    const mensajePin = document.getElementById('mensajePin');
+
+    // Elementos App
     const btnMenu = document.getElementById('btnMenu');
     const btnCloseMenu = document.getElementById('btnCloseMenu');
     const sideMenu = document.getElementById('sideMenu');
@@ -28,7 +37,67 @@ document.addEventListener("DOMContentLoaded", () => {
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
 
-    // --- NAV Y MENÚ ---
+    // --- 1. VERIFICAR AUTENTICACIÓN AL CARGAR ---
+    checkAutenticacion();
+
+    async function checkAutenticacion() {
+        try {
+            const res = await fetch('/check_auth');
+            if (res.ok) {
+                desbloquearApp();
+            } else {
+                bloquearApp();
+            }
+        } catch (e) {
+            bloquearApp();
+        }
+    }
+
+    function desbloquearApp() {
+        pantallaPin.classList.add('hidden');
+        contenidoApp.classList.remove('hidden');
+    }
+
+    function bloquearApp() {
+        pantallaPin.classList.remove('hidden');
+        contenidoApp.classList.add('hidden');
+    }
+
+    formPin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const pin = inputPin.value.trim();
+        if (!pin) return;
+
+        btnPin.textContent = "Verificando...";
+        btnPin.disabled = true;
+
+        try {
+            const res = await fetch('/verificar_pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pin })
+            });
+
+            if (res.ok) {
+                desbloquearApp();
+            } else {
+                mostrarMensajePin("PIN incorrecto");
+            }
+        } catch (e) {
+            mostrarMensajePin("Error de conexión");
+        } finally {
+            btnPin.textContent = "Ingresar";
+            btnPin.disabled = false;
+        }
+    });
+
+    function mostrarMensajePin(texto) {
+        mensajePin.textContent = texto;
+        mensajePin.className = 'error';
+        setTimeout(() => { mensajePin.className = 'hidden'; }, 3000);
+    }
+
+    // --- 2. NAV Y MENÚ LATERAL ---
     function toggleMenu() {
         sideMenu.classList.toggle('hidden');
         overlay.classList.toggle('hidden');
@@ -79,10 +148,12 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    // --- CARGAR MÉTRICAS AMPLIADAS ---
+    // --- 3. CARGAR MÉTRICAS ---
     async function cargarMetricas() {
         try {
             const res = await fetch('/obtener_metricas');
+            if (res.status === 401) { bloquearApp(); return; }
+            
             const data = await res.json();
             if (data.status === 'success') {
                 document.getElementById('lblBalance').textContent = data.balance;
@@ -92,7 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblGastoDiario').textContent = data.gasto_diario;
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
-                // Renderizar desglose por categoría
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -118,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- ENVIAR MOVIMIENTO ---
+    // --- 4. ENVIAR MOVIMIENTO ---
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
@@ -142,6 +212,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(datos)
             });
 
+            if (response.status === 401) { bloquearApp(); return; }
+
             const data = await response.json();
 
             if (data.status === 'needs_category') {
@@ -163,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- MODAL Y NUEVAS CATEGORÍAS ---
+    // --- 5. MODAL ---
     function abrirModal(concepto, categoriasDisponibles) {
         conceptoModal.textContent = concepto;
         selectCategoria.innerHTML = '';

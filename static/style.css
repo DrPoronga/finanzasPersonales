@@ -263,3 +263,37 @@ button:hover {
 .modal-content h2 { margin-top: 0; font-weight: 500; }
 .modal-content select { margin: 20px 0; }
 .modal-content button { margin-bottom: 10px; padding: 18px; }
+
+/* PANTALLA DE DESBLOQUEO POR PIN */
+.pin-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: var(--bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.pin-box {
+    width: 100%;
+    max-width: 320px;
+    padding: 20px;
+    text-align: center;
+}
+
+.pin-box p {
+    font-size: 16px;
+    color: var(--subtext);
+    margin-bottom: 25px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.pin-box input {
+    text-align: center;
+    letter-spacing: 6px;
+    font-size: 24px;
+    margin-bottom: 15px;
+}

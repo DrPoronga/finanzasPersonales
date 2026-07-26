@@ -1,11 +1,19 @@
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime
+from flask import Flask, render_template, request, jsonify, session
+from datetime import datetime, timedelta
+from functools import wraps
 import os
 import json
 import traceback
 import gspread
 
 app = Flask(__name__)
+
+# Clave secreta para encriptar la sesión en el navegador
+app.secret_key = os.environ.get('SECRET_KEY', 'finanzas_secret_key_2026_super_segura')
+app.permanent_session_lifetime = timedelta(days=31)
+
+# PIN de acceso (Por defecto 1234, configurable en Render)
+PIN_CORRECTO = str(os.environ.get('APP_PIN', '4372736')).strip()
 
 MESES = {
     1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
@@ -25,6 +33,18 @@ def conectar_google_sheets():
     SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
     return cliente.open_by_key(SPREADSHEET_ID)
 
+# --- DECORADOR DE SEGURIDAD ---
+def requiere_pin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        mes_actual = datetime.now().month
+        # Verifica que esté autenticado y que corresponda al mes actual
+        if not session.get('autenticado') or session.get('auth_month') != mes_actual:
+            session.clear()
+            return jsonify({"status": "unauthorized", "message": "PIN requerido"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
 def detectar_categoria(hoja_cat, concepto_ingresado):
     try:
         registros = hoja_cat.get_all_records()
@@ -43,7 +63,33 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
 def home():
     return render_template('index.html')
 
+# --- RUTAS DE AUTENTICACIÓN POR PIN ---
+@app.route('/verificar_pin', methods=['POST'])
+def verificar_pin():
+    datos = request.get_json()
+    pin_ingresado = str(datos.get('pin', '')).strip()
+
+    if pin_ingresado == PIN_CORRECTO:
+        session.permanent = True
+        session['autenticado'] = True
+        session['auth_month'] = datetime.now().month  # Guardamos el mes actual
+        return jsonify({"status": "success"})
+    
+    return jsonify({"status": "error", "message": "PIN incorrecto"}), 401
+
+@app.route('/check_auth', methods=['GET'])
+def check_auth():
+    mes_actual = datetime.now().month
+    if session.get('autenticado') and session.get('auth_month') == mes_actual:
+        return jsonify({"status": "authenticated"})
+    
+    session.clear()
+    return jsonify({"status": "unauthenticated"}), 401
+
+
+# --- RUTAS PROTEGIDAS ---
 @app.route('/registrar_gasto', methods=['POST'])
+@requiere_pin
 def registrar_gasto():
     datos = request.get_json()
     concepto = datos.get('concepto', '').strip()
@@ -52,8 +98,8 @@ def registrar_gasto():
     nueva_categoria = datos.get('nueva_categoria')
 
     ahora = datetime.now()
-    fecha_hoy = me = me = ahora.strftime("%d/%m/%Y")
-    hora_actual = me = me = ahora.strftime("%H:%M")
+    fecha_hoy = ahora.strftime("%d/%m/%Y")
+    hora_actual = ahora.strftime("%H:%M")
     nombre_mes = MESES[ahora.month]
 
     try:
@@ -96,6 +142,7 @@ def registrar_gasto():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/obtener_metricas', methods=['GET'])
+@requiere_pin
 def obtener_metricas():
     try:
         doc = conectar_google_sheets()
@@ -120,19 +167,15 @@ def obtener_metricas():
                 gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
 
         balance_real = total_ingresos - total_gastos
-        
-        # Tasa de ahorro (%)
         tasa_ahorro = ((total_ingresos - total_gastos) / total_ingresos * 100) if total_ingresos > 0 else 0.0
         
-        # Ticket promedio por gasto
-        ticket_promedio = (total_gastos / conteo_gastos) if conteo_gastos > 0 else 0.0
+        dia_actual = datetime.now().day
+        gasto_diario = (total_gastos / dia_actual) if dia_actual > 0 else 0.0
 
-        # Mayor categoría de gasto
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=gastos_por_categoria.get)
 
-        # Desglose ordenado de mayor a menor gasto con porcentaje
         desglose = []
         for cat, monto in sorted(gastos_por_categoria.items(), key=lambda item: item[1], reverse=True):
             pct = (monto / total_gastos * 100) if total_gastos > 0 else 0

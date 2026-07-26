@@ -8,106 +8,116 @@
 </head>
 <body>
 
-    <!-- MENÚ ANCLADO EN ESQUINA -->
-    <header class="navbar">
-        <button id="btnMenu" class="hamburger-btn">☰</button>
-    </header>
-
-    <!-- MENÚ LATERAL -->
-    <nav id="sideMenu" class="side-menu hidden">
-        <button id="btnCloseMenu" class="close-btn">&times;</button>
-        <ul>
-            <li><a href="#" id="menuGasto" class="active">Registrar Gasto</a></li>
-            <li><a href="#" id="menuIngreso">Registrar Ingreso</a></li>
-            <li><a href="#" id="menuMetricas">Balance y Métricas</a></li>
-        </ul>
-    </nav>
-    <div id="overlay" class="overlay hidden"></div>
-
-    <div class="container">
-        
-        <!-- VISTA PRINCIPAL: FORMULARIO ÚNICO -->
-        <section id="vistaFormulario">
-            <form id="registroForm">
-                <div class="form-group">
-                    <input type="text" id="concepto" placeholder="Concepto" required>
-                </div>
-                
-                <div class="form-group">
-                    <input type="number" id="monto" placeholder="Monto" required>
-                </div>
-                
-                <button type="submit" id="btnSubmit">Registrar Gasto</button>
+    <!-- PANTALLA DE BLOQUEO POR PIN -->
+    <div id="pantallaPin" class="pin-screen">
+        <div class="pin-box">
+            <p>Acceso Restringido</p>
+            <form id="formPin">
+                <input type="password" id="inputPin" placeholder="Ingresa PIN" inputmode="numeric" maxlength="8" required autofocus>
+                <button type="submit" id="btnPin">Ingresar</button>
             </form>
-        </section>
-
-        <!-- VISTA MÉTRICAS AMPLIADAS -->
-        <section id="vistaMetricas" class="hidden">
-            <!-- Balance General -->
-            <div class="card balance-card">
-                <h3>Balance Real</h3>
-                <span id="lblBalance" class="monto-destacado">$0</span>
-            </div>
-
-            <!-- Grilla Principal -->
-            <div class="metricas-grid">
-                <div class="card">
-                    <h4>Ingresos</h4>
-                    <span id="lblIngresos">$0</span>
-                </div>
-                <div class="card">
-                    <h4>Gastos</h4>
-                    <span id="lblGastos">$0</span>
-                </div>
-            </div>
-
-            <!-- Grilla Secundaria -->
-            <div class="metricas-grid">
-                <div class="card">
-                    <h4>Tasa de Ahorro</h4>
-                    <span id="lblTasaAhorro">0%</span>
-                </div>
-                <div class="card">
-                    <h4>Gasto Diario Promedio</h4>
-                    <span id="lblGastoDiario">$0</span>
-                </div>
-            </div>
-
-            <!-- Categoría Principal -->
-            <div class="card">
-                <h4>Mayor Categoría de Gasto</h4>
-                <span id="lblTopCategoria" style="font-size: 20px; font-weight: 600;">-</span>
-            </div>
-
-            <!-- Desglose por Categoría -->
-            <div class="card desglose-card">
-                <h4>Gastos por Categoría</h4>
-                <div id="listaDesglose">
-                    <!-- Se llena desde JS -->
-                </div>
-            </div>
-
-            <button id="btnActualizarMetricas" class="btn-secondary" style="margin-top: 10px;">Actualizar Cifras</button>
-        </section>
-
-        <div id="mensaje" class="hidden"></div>
+            <div id="mensajePin" class="hidden"></div>
+        </div>
     </div>
 
-    <!-- MODAL -->
-    <div id="modalCategoria" class="modal hidden">
-        <div class="modal-content">
-            <h2>Clasificar</h2>
-            <p>Categoría para "<span id="conceptoModal"></span>":</p>
-            
-            <select id="selectCategoria"></select>
-            
-            <div id="containerNuevaCategoria" class="form-group hidden">
-                <input type="text" id="inputNuevaCategoria" placeholder="Nombre de la nueva categoría">
-            </div>
+    <!-- CONTENIDO PRINCIPAL (Oculto hasta validar PIN) -->
+    <div id="contenidoApp" class="hidden">
+        
+        <!-- MENÚ ANCLADO EN ESQUINA -->
+        <header class="navbar">
+            <button id="btnMenu" class="hamburger-btn">☰</button>
+        </header>
 
-            <button id="btnGuardarCategoria" class="btn-primary" style="margin-top: 15px;">Guardar</button>
-            <button id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+        <!-- MENÚ LATERAL -->
+        <nav id="sideMenu" class="side-menu hidden">
+            <button id="btnCloseMenu" class="close-btn">&times;</button>
+            <ul>
+                <li><a href="#" id="menuGasto" class="active">Registrar Gasto</a></li>
+                <li><a href="#" id="menuIngreso">Registrar Ingreso</a></li>
+                <li><a href="#" id="menuMetricas">Balance y Métricas</a></li>
+            </ul>
+        </nav>
+        <div id="overlay" class="overlay hidden"></div>
+
+        <div class="container">
+            
+            <!-- VISTA PRINCIPAL: FORMULARIO ÚNICO -->
+            <section id="vistaFormulario">
+                <form id="registroForm">
+                    <div class="form-group">
+                        <input type="text" id="concepto" placeholder="Concepto" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="number" id="monto" placeholder="Monto" required>
+                    </div>
+                    
+                    <button type="submit" id="btnSubmit">Registrar Gasto</button>
+                </form>
+            </section>
+
+            <!-- VISTA MÉTRICAS -->
+            <section id="vistaMetricas" class="hidden">
+                <div class="card balance-card">
+                    <h3>Balance Real</h3>
+                    <span id="lblBalance" class="monto-destacado">$0</span>
+                </div>
+
+                <div class="metricas-grid">
+                    <div class="card">
+                        <h4>Ingresos</h4>
+                        <span id="lblIngresos">$0</span>
+                    </div>
+                    <div class="card">
+                        <h4>Gastos</h4>
+                        <span id="lblGastos">$0</span>
+                    </div>
+                </div>
+
+                <div class="metricas-grid">
+                    <div class="card">
+                        <h4>Tasa de Ahorro</h4>
+                        <span id="lblTasaAhorro">0%</span>
+                    </div>
+                    <div class="card">
+                        <h4>Promedio Diario</h4>
+                        <span id="lblGastoDiario">$0</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Mayor Categoría de Gasto</h4>
+                    <span id="lblTopCategoria" style="font-size: 20px; font-weight: 600;">-</span>
+                </div>
+
+                <div class="card desglose-card">
+                    <h4>Gastos por Categoría</h4>
+                    <div id="listaDesglose"></div>
+                </div>
+
+                <button id="btnActualizarMetricas" class="btn-secondary" style="margin-top: 10px;">Actualizar Cifras</button>
+            </section>
+
+            <div id="mensaje" class="hidden"></div>
         </div>
+
+        <!-- MODAL CLASIFICAR -->
+        <div id="modalCategoria" class="modal hidden">
+            <div class="modal-content">
+                <h2>Clasificar</h2>
+                <p>Categoría para "<span id="conceptoModal"></span>":</p>
+                
+                <select id="selectCategoria"></select>
+                
+                <div id="containerNuevaCategoria" class="form-group hidden">
+                    <input type="text" id="inputNuevaCategoria" placeholder="Nombre de la nueva categoría">
+                </div>
+
+                <button id="btnGuardarCategoria" class="btn-primary" style="margin-top: 15px;">Guardar</button>
+                <button id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+
     </div>
 
     <script src="/static/app.js"></script>
