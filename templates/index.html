@@ -3,35 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Finanzas | Registro Inteligente</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Mis Finanzas</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <div class="container">
-        <h1 class="title">Control Financiero</h1>
-        <p class="subtitle">Registro Diario de Gastos</p>
-
-        <div class="card">
-            <form id="gasto-form">
-                <label for="concepto">¿Qué compraste / pagaste?</label>
-                <input type="text" id="concepto" placeholder="Ej: manteca, UTE, nafta..." required autocomplete="off">
-
-                <label for="monto">¿Cuánto fue?</label>
-                <div class="input-group">
-                    <span class="currency">$</span>
-                    <input type="number" id="monto" placeholder="0" required min="1">
-                </div>
-
-                <button type="submit" class="btn-gasto">REGISTRAR GASTO</button>
-            </form>
-            
-            <div id="resultado" class="oculto">
-                <p id="mensaje-exito"></p>
-                <p id="detalle-categoria" class="badge"></p>
+        <h1>💸 Nuevo Gasto</h1>
+        
+        <form id="gastoForm">
+            <div class="form-group">
+                <label for="concepto">Concepto</label>
+                <input type="text" id="concepto" placeholder="Ej: Supermercado, UTE..." required>
             </div>
+            
+            <div class="form-group">
+                <label for="monto">Monto ($)</label>
+                <input type="number" id="monto" placeholder="Ej: 1500" required>
+            </div>
+            
+            <button type="submit" id="btnSubmit">Registrar Gasto</button>
+        </form>
+
+        <div id="mensaje" class="hidden"></div>
+    </div>
+
+    <!-- MODAL DE APRENDIZAJE (Oculto por defecto) -->
+    <div id="modalCategoria" class="modal hidden">
+        <div class="modal-content">
+            <h2>¡Nuevo Gasto detectado! 🤔</h2>
+            <p>Aún no sé a qué categoría pertenece <strong>"<span id="conceptoModal"></span>"</strong>.</p>
+            <p>¿En dónde lo agrupo para la próxima vez?</p>
+            
+            <select id="selectCategoria"></select>
+            
+            <button id="btnGuardarCategoria" class="btn-primary">Aprender y Guardar</button>
+            <button id="btnCancelarModal" class="btn-secondary">Cancelar</button>
         </div>
     </div>
-    
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+
+    <script src="/static/app.js"></script>
 </body>
 </html>

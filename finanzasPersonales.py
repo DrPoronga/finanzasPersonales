@@ -25,12 +25,12 @@ def conectar_google_sheets():
         ruta_creds = '/etc/secrets/credenciales.json' if os.path.exists('/etc/secrets/credenciales.json') else 'credenciales.json'
         cliente = gspread.service_account(filename=ruta_creds)
 
-    # ID real de tu planilla extraído de tu URL
+    # ID de tu planilla real
     SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
     
     spreadsheet = cliente.open_by_key(SPREADSHEET_ID)
     return spreadsheet
-    
+
 def detectar_categoria(hoja_cat, concepto_ingresado):
     try:
         registros = hoja_cat.get_all_records()
@@ -38,12 +38,13 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
         
         for fila in registros:
             palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
+            # Buscamos si la palabra clave existe y coincide
             if palabra_clave and palabra_clave in concepto_lower:
                 return fila.get('Categoria', 'Varios'), fila.get('Tipo', 'Pasivo')
     except Exception as e:
         print(f"Aviso detectando categoría: {e}")
         
-    return "Varios", "Pasivo"
+    return None, None # Ya no retorna "Varios" por defecto, ahora retorna None para saber que no lo encontró
 
 @app.route('/')
 def home():
@@ -54,6 +55,7 @@ def registrar_gasto():
     datos = request.get_json()
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
+    nueva_categoria = datos.get('nueva_categoria') # Recibimos esto si el usuario la seleccionó en el modal
 
     ahora = datetime.now()
     fecha_hoy = ahora.strftime("%d/%m/%Y")
@@ -66,16 +68,40 @@ def registrar_gasto():
         hoja_categorias = doc.worksheet("Categorias")
         hoja_resumen = doc.worksheet("Resumen")
 
-        # 1. Categorización automática
-        categoria, tipo = detectar_categoria(hoja_categorias, concepto)
+        # ====== LÓGICA DE APRENDIZAJE ======
+        if nueva_categoria:
+            # 1. El usuario nos enseñó una nueva categoría a través del modal
+            categoria = nueva_categoria
+            tipo = "Pasivo" # Por defecto los gastos son Pasivos
+            # Guardamos la nueva regla en la pestaña Categorias
+            hoja_categorias.append_row([concepto.lower(), categoria, tipo])
+        else:
+            # 2. Búsqueda normal para ver si ya lo conoce
+            categoria, tipo = detectar_categoria(hoja_categorias, concepto)
+            
+            # Si no lo conoce, le pedimos al frontend que abra el modal
+            if not categoria:
+                # Buscamos todas las categorías únicas que tienes para armar el desplegable
+                cat_records = hoja_categorias.col_values(2)[1:] # Ignoramos el encabezado
+                categorias_unicas = sorted(list(set([c for c in cat_records if c.strip()])))
+                
+                # Por si la hoja está vacía, ponemos unas de base
+                if not categorias_unicas:
+                    categorias_unicas = ["Alimentación", "Servicios", "Transporte", "Varios"]
+                
+                return jsonify({
+                    "status": "needs_category",
+                    "categorias": categorias_unicas
+                })
 
-        # 2. Guardar en Transacciones
+        # ====== GUARDADO NORMAL DEL GASTO ======
+        # Guardar en Transacciones
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes])
 
-        # 3. Actualizar Resumen (si el concepto coincide)
+        # Actualizar Resumen (solo si coincide el concepto)
         try:
-            conceptos_resumen = hoja_resumen.col_values(2) # Columna B
-            encabezados = hoja_resumen.row_values(1)       # Fila 1
+            conceptos_resumen = hoja_resumen.col_values(2)
+            encabezados = hoja_resumen.row_values(1)
 
             if concepto.upper() in [c.upper() for c in conceptos_resumen] and nombre_mes in encabezados:
                 fila_idx = [c.upper() for c in conceptos_resumen].index(concepto.upper()) + 1
