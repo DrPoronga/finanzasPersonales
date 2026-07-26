@@ -7,32 +7,88 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+
+    <!-- BARRA SUPERIOR CON MENU HAMBURGUESA -->
+    <header class="navbar">
+        <button id="btnMenu" class="hamburger-btn">☰</button>
+        <h1 class="logo">Mis Finanzas</h1>
+    </header>
+
+    <!-- MENU LATERAL (DESPLEGABLE) -->
+    <nav id="sideMenu" class="side-menu hidden">
+        <button id="btnCloseMenu" class="close-btn">&times;</button>
+        <ul>
+            <li><a href="#" id="menuRegistrar" class="active">📝 Registrar Movimiento</a></li>
+            <li><a href="#" id="menuMetricas">📊 Balance y Métricas</a></li>
+        </ul>
+    </nav>
+    <div id="overlay" class="overlay hidden"></div>
+
     <div class="container">
-        <h1>💸 Nuevo Gasto</h1>
         
-        <form id="gastoForm">
-            <div class="form-group">
-                <label for="concepto">Concepto</label>
-                <input type="text" id="concepto" placeholder="Ej: Supermercado, UTE..." required>
-            </div>
+        <!-- VISTA 1: REGISTRAR MOVIMIENTO -->
+        <section id="vistaRegistrar">
+            <h2>💸 Nuevo Movimiento</h2>
+            <form id="gastoForm">
+                
+                <!-- SELECTOR INGRESO / GASTO -->
+                <div class="form-group tipo-selector">
+                    <label>
+                        <input type="radio" name="tipoMovimiento" value="Pasivo" checked> 
+                        🔴 Gasto
+                    </label>
+                    <label>
+                        <input type="radio" name="tipoMovimiento" value="Activo"> 
+                        🟢 Ingreso (Sueldo/Venta)
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label for="concepto">Concepto</label>
+                    <input type="text" id="concepto" placeholder="Ej: Sueldo, Supermercado..." required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="monto">Monto ($)</label>
+                    <input type="number" id="monto" placeholder="Ej: 1500" required>
+                </div>
+                
+                <button type="submit" id="btnSubmit">Registrar</button>
+            </form>
+        </section>
+
+        <!-- VISTA 2: METRICAS Y BALANCE REAL (Oculto por defecto) -->
+        <section id="vistaMetricas" class="hidden">
+            <h2>📊 Estado Financiero</h2>
             
-            <div class="form-group">
-                <label for="monto">Monto ($)</label>
-                <input type="number" id="monto" placeholder="Ej: 1500" required>
+            <div class="card balance-card">
+                <h3>💰 Balance Real en Banco</h3>
+                <span id="lblBalance" class="monto-destacado">$0</span>
             </div>
-            
-            <button type="submit" id="btnSubmit">Registrar Gasto</button>
-        </form>
+
+            <div class="metricas-grid">
+                <div class="card ingreso-card">
+                    <h4>🟢 Total Ingresos</h4>
+                    <span id="lblIngresos">$0</span>
+                </div>
+                <div class="card gasto-card">
+                    <h4>🔴 Total Gastos</h4>
+                    <span id="lblGastos">$0</span>
+                </div>
+            </div>
+
+            <button id="btnActualizarMetricas" class="btn-secondary" style="margin-top: 15px;">🔄 Actualizar Cifras</button>
+        </section>
 
         <div id="mensaje" class="hidden"></div>
     </div>
 
-    <!-- MODAL DE APRENDIZAJE (Oculto por defecto) -->
+    <!-- MODAL DE APRENDIZAJE -->
     <div id="modalCategoria" class="modal hidden">
         <div class="modal-content">
-            <h2>¡Nuevo Gasto detectado! 🤔</h2>
+            <h2>¡Nuevo Concepto detectado! 🤔</h2>
             <p>Aún no sé a qué categoría pertenece <strong>"<span id="conceptoModal"></span>"</strong>.</p>
-            <p>¿En dónde lo agrupo para la próxima vez?</p>
+            <p>¿En dónde lo agrupo?</p>
             
             <select id="selectCategoria"></select>
             

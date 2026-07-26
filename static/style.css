@@ -139,3 +139,129 @@ button:hover {
 .modal-content select {
     margin-bottom: 25px;
 }
+
+/* NAVBAR & MENU HAMBURGUESA */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 100;
+}
+
+.hamburger-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    width: auto;
+    padding: 5px 10px;
+    margin: 0;
+    color: var(--text);
+}
+
+.logo {
+    font-size: 18px;
+    margin: 0 0 0 15px;
+}
+
+/* MENU LATERAL */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 250px;
+    background: var(--surface);
+    z-index: 1000;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    padding: 20px;
+    transition: transform 0.3s ease;
+}
+
+.side-menu.hidden {
+    display: block !important;
+    transform: translateX(-100%);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: var(--text);
+    cursor: pointer;
+    float: right;
+    width: auto;
+}
+
+.side-menu ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 50px;
+}
+
+.side-menu li { margin-bottom: 15px; }
+
+.side-menu a {
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 16px;
+    display: block;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.side-menu a.active, .side-menu a:hover {
+    background-color: var(--bg);
+    color: var(--primary);
+}
+
+.overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4);
+    z-index: 999;
+}
+
+/* CARDS DE BALANCE Y METRICAS */
+.tipo-selector {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.tipo-selector label {
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.card {
+    background: var(--bg);
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.monto-destacado {
+    font-size: 28px;
+    font-weight: bold;
+    color: #10B981;
+}
+
+.metricas-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ingreso-card h4, .gasto-card h4 { margin: 0 0 5px 0; font-size: 14px; }
+.ingreso-card span { color: #10B981; font-weight: bold; font-size: 18px; }
+.gasto-card span { color: #EF4444; font-weight: bold; font-size: 18px; }
+

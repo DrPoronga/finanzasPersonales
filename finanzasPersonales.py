@@ -50,15 +50,17 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
 def home():
     return render_template('index.html')
 
+# ====== REGISTRAR MOVIMIENTO (GASTO O INGRESO) ======
 @app.route('/registrar_gasto', methods=['POST'])
 def registrar_gasto():
     datos = request.get_json()
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
-    nueva_categoria = datos.get('nueva_categoria') # Recibimos esto si el usuario la seleccionó en el modal
+    tipo_ingresado = datos.get('tipo', 'Pasivo') # 'Activo' (Ingreso) o 'Pasivo' (Gasto)
+    nueva_categoria = datos.get('nueva_categoria')
 
     ahora = datetime.now()
-    fecha_hoy = ahora.strftime("%d/%m/%Y")
+    fecha_hoy = me = ahora.strftime("%d/%m/%Y")
     hora_actual = ahora.strftime("%H:%M")
     nombre_mes = MESES[ahora.month]
 
@@ -66,66 +68,72 @@ def registrar_gasto():
         doc = conectar_google_sheets()
         hoja_transacciones = doc.worksheet("Transacciones")
         hoja_categorias = doc.worksheet("Categorias")
-        hoja_resumen = doc.worksheet("Resumen")
 
-        # ====== LÓGICA DE APRENDIZAJE ======
         if nueva_categoria:
-            # 1. El usuario nos enseñó una nueva categoría a través del modal
             categoria = nueva_categoria
-            tipo = "Pasivo" # Por defecto los gastos son Pasivos
-            # Guardamos la nueva regla en la pestaña Categorias
+            tipo = tipo_ingresado
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
-            # 2. Búsqueda normal para ver si ya lo conoce
             categoria, tipo = detectar_categoria(hoja_categorias, concepto)
-            
-            # Si no lo conoce, le pedimos al frontend que abra el modal
+            if not tipo: 
+                tipo = tipo_ingresado
+
             if not categoria:
-                # Buscamos todas las categorías únicas que tienes para armar el desplegable
-                cat_records = hoja_categorias.col_values(2)[1:] # Ignoramos el encabezado
+                cat_records = hoja_categorias.col_values(2)[1:]
                 categorias_unicas = sorted(list(set([c for c in cat_records if c.strip()])))
-                
-                # Por si la hoja está vacía, ponemos unas de base
                 if not categorias_unicas:
-                    categorias_unicas = ["Alimentación", "Servicios", "Transporte", "Varios"]
+                    categorias_unicas = ["Alimentación", "Sueldo", "Servicios", "Ventas", "Varios"]
                 
                 return jsonify({
                     "status": "needs_category",
                     "categorias": categorias_unicas
                 })
 
-        # ====== GUARDADO NORMAL DEL GASTO ======
-        # Guardar en Transacciones
-        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes])
-
-        # Actualizar Resumen (solo si coincide el concepto)
-        try:
-            conceptos_resumen = hoja_resumen.col_values(2)
-            encabezados = hoja_resumen.row_values(1)
-
-            if concepto.upper() in [c.upper() for c in conceptos_resumen] and nombre_mes in encabezados:
-                fila_idx = [c.upper() for c in conceptos_resumen].index(concepto.upper()) + 1
-                col_idx = encabezados.index(nombre_mes) + 1
-
-                val_actual = hoja_resumen.cell(fila_idx, col_idx).value or "$0"
-                num_actual = float(str(val_actual).replace('$', '').replace('.', '').replace(',', '.').strip() or 0)
-                nuevo_monto = num_actual + monto
-
-                hoja_resumen.update_cell(fila_idx, col_idx, f"${nuevo_monto:,.0f}")
-        except Exception as err_resumen:
-            print(f"Aviso en Resumen: {err_resumen}")
+        # Guardamos 7 columnas en Transacciones: Fecha, Hora, Concepto, Monto, Categoria, Mes, Tipo
+        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo])
 
         return jsonify({
             "status": "success",
-            "message": "Gasto registrado correctamente",
+            "message": "Movimiento registrado correctamente",
             "categoria": categoria,
             "tipo": tipo
         })
 
     except Exception as e:
-        print(f"❌ ERROR DETALLADO:")
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# ====== NUEVO ENDPOINT: OBTENER BALANCE Y METRICAS ======
+@app.route('/obtener_metricas', methods=['GET'])
+def obtener_metricas():
+    try:
+        doc = conectar_google_sheets()
+        hoja_transacciones = doc.worksheet("Transacciones")
+        registros = hoja_transacciones.get_all_records()
+
+        total_ingresos = 0.0
+        total_gastos = 0.0
+
+        for r in registros:
+            monto = float(r.get('Monto', 0) or 0)
+            tipo = str(r.get('Tipo', '')).strip().capitalize()
+
+            # Si el tipo es Activo sumar a ingresos, si es Pasivo sumar a gastos
+            if tipo == 'Activo':
+                total_ingresos += monto
+            else:
+                total_gastos += monto
+
+        balance_real = total_ingresos - total_gastos
+
+        return jsonify({
+            "status": "success",
+            "ingresos": f"${total_ingresos:,.0f}",
+            "gastos": f"${total_gastos:,.0f}",
+            "balance": f"${balance_real:,.0f}"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
 if __name__ == '__main__':
     app.run(debug=True)
