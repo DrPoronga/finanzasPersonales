@@ -88,6 +88,7 @@ def registrar_gasto():
     datos = request.get_json()
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
+    moneda = datos.get('moneda', 'UYU').upper().strip() # Toma moneda
     tipo_ingresado = datos.get('tipo', 'Pasivo')
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
@@ -123,7 +124,8 @@ def registrar_gasto():
                     "categorias": categorias_unicas
                 })
 
-        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo, prescindible])
+        # Registra la moneda entre monto y categoría
+        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible])
 
         return jsonify({
             "status": "success",
@@ -148,15 +150,15 @@ def obtener_metricas():
         mes_actual_nombre = MESES[ahora.month]
         mes_solicitado = request.args.get('mes', mes_actual_nombre).upper().strip()
 
-        total_ingresos_acumulado = 0.0
-        total_gastos_acumulado = 0.0
+        # Acumulados UYU y USD
+        total_ingresos_acumulado_uyu, total_gastos_acumulado_uyu = 0.0, 0.0
+        total_ingresos_acumulado_usd, total_gastos_acumulado_usd = 0.0, 0.0
 
-        total_ingresos_filtrado = 0.0
-        total_gastos_filtrado = 0.0
-        total_prescindible_filtrado = 0.0
-        conteo_gastos_filtrado = 0
+        # Mes filtrado
+        total_ingresos_filtrado_uyu, total_gastos_filtrado_uyu, total_prescindible_filtrado_uyu = 0.0, 0.0, 0.0
+        total_ingresos_filtrado_usd, total_gastos_filtrado_usd, total_prescindible_filtrado_usd = 0.0, 0.0, 0.0
+        
         gastos_por_categoria = {}
-
         meses_encontrados = set()
 
         for r in registros:
@@ -165,61 +167,78 @@ def obtener_metricas():
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
             presc = str(r.get('Prescindible', '')).strip().capitalize()
             mes_registro = str(r.get('Mes', '')).strip().upper()
+            moneda = str(r.get('Moneda', 'UYU')).strip().upper() or 'UYU'
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
             # Acumulado total para saber Dinero Real en el banco
-            if tipo == 'Activo':
-                total_ingresos_acumulado += monto
+            if moneda == 'USD':
+                if tipo == 'Activo': total_ingresos_acumulado_usd += monto
+                else: total_gastos_acumulado_usd += monto
             else:
-                total_gastos_acumulado += monto
+                if tipo == 'Activo': total_ingresos_acumulado_uyu += monto
+                else: total_gastos_acumulado_uyu += monto
 
             # Filtro para el mes seleccionado
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
-                if tipo == 'Activo':
-                    total_ingresos_filtrado += monto
+                if cat not in gastos_por_categoria:
+                    gastos_por_categoria[cat] = {'UYU': 0.0, 'USD': 0.0}
+
+                if moneda == 'USD':
+                    if tipo == 'Activo':
+                        total_ingresos_filtrado_usd += monto
+                    else:
+                        total_gastos_filtrado_usd += monto
+                        gastos_por_categoria[cat]['USD'] += monto
+                        if presc in ['Sí', 'Si', 'True']:
+                            total_prescindible_filtrado_usd += monto
                 else:
-                    total_gastos_filtrado += monto
-                    conteo_gastos_filtrado += 1
-                    gastos_por_categoria[cat] = gastos_por_categoria.get(cat, 0.0) + monto
+                    if tipo == 'Activo':
+                        total_ingresos_filtrado_uyu += monto
+                    else:
+                        total_gastos_filtrado_uyu += monto
+                        gastos_por_categoria[cat]['UYU'] += monto
+                        if presc in ['Sí', 'Si', 'True']:
+                            total_prescindible_filtrado_uyu += monto
 
-                    if presc in ['Sí', 'Si', 'True']:
-                        total_prescindible_filtrado += monto
+        balance_real_uyu = total_ingresos_acumulado_uyu - total_gastos_acumulado_uyu
+        balance_real_usd = total_ingresos_acumulado_usd - total_gastos_acumulado_usd
 
-        balance_real = total_ingresos_acumulado - total_gastos_acumulado
-
-        # Cálculo de Disponible para Hoy (solo aplica si estamos viendo el mes actual)
-        disponible_hoy_num = 0.0
+        disponible_hoy_uyu, disponible_hoy_usd = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
-            disponible_hoy_num = max(0.0, balance_real / dias_restantes)
+            disponible_hoy_uyu = max(0.0, balance_real_uyu / dias_restantes)
+            disponible_hoy_usd = max(0.0, balance_real_usd / dias_restantes)
 
-        # Promedio Diario del mes seleccionado
-        if mes_solicitado == mes_actual_nombre:
-            divisor_dias = max(1, ahora.day)
-        elif mes_solicitado == "TODOS":
-            divisor_dias = 30
-        else:
-            divisor_dias = 30 # Para meses pasados completos
-        gasto_diario_num = (total_gastos_filtrado / divisor_dias) if divisor_dias > 0 else 0.0
+        # Promedio Diario
+        if mes_solicitado == mes_actual_nombre: divisor_dias = max(1, ahora.day)
+        elif mes_solicitado == "TODOS": divisor_dias = 30
+        else: divisor_dias = 30
+        
+        gasto_diario_uyu = (total_gastos_filtrado_uyu / divisor_dias) if divisor_dias > 0 else 0.0
+        gasto_diario_usd = (total_gastos_filtrado_usd / divisor_dias) if divisor_dias > 0 else 0.0
 
-        tasa_ahorro = ((total_ingresos_filtrado - total_gastos_filtrado) / total_ingresos_filtrado * 100) if total_ingresos_filtrado > 0 else 0.0
+        # Tasa de Ahorro
+        ingresos_tot = total_ingresos_filtrado_uyu + total_ingresos_filtrado_usd
+        gastos_tot = total_gastos_filtrado_uyu + total_gastos_filtrado_usd
+        tasa_ahorro = ((ingresos_tot - gastos_tot) / ingresos_tot * 100) if ingresos_tot > 0 else 0.0
 
+        # Ponderación para encontrar el mayor gasto (1 USD = 40 UYU aprox estimado para ordenar visualmente)
         top_cat = "-"
         if gastos_por_categoria:
-            top_cat = max(gastos_por_categoria, key=gastos_por_categoria.get)
+            top_cat = max(gastos_por_categoria, key=lambda c: gastos_por_categoria[c]['UYU'] + (gastos_por_categoria[c]['USD'] * 40))
 
         desglose = []
-        for cat, monto in sorted(gastos_por_categoria.items(), key=lambda item: item[1], reverse=True):
-            pct = (monto / total_gastos_filtrado * 100) if total_gastos_filtrado > 0 else 0
-            desglose.append({
-                "categoria": cat,
-                "monto": f"${monto:,.0f}",
-                "porcentaje": f"{pct:.1f}%"
-            })
+        for cat, montos in sorted(gastos_por_categoria.items(), key=lambda item: item[1]['UYU'] + (item[1]['USD'] * 40), reverse=True):
+            if montos['UYU'] > 0 or montos['USD'] > 0:
+                desglose.append({
+                    "categoria": cat,
+                    "monto_uyu": f"${montos['UYU']:,.0f} UYU" if montos['UYU'] > 0 else "",
+                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else ""
+                })
 
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
@@ -228,13 +247,13 @@ def obtener_metricas():
             "status": "success",
             "mes_actual": mes_solicitado,
             "meses_disponibles": meses_ordenados,
-            "disponible_hoy": f"${disponible_hoy_num:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
-            "balance": f"${balance_real:,.0f}",
-            "ingresos": f"${total_ingresos_filtrado:,.0f}",
-            "gastos": f"${total_gastos_filtrado:,.0f}",
-            "prescindible": f"${total_prescindible_filtrado:,.0f}",
+            "disponible_hoy": f"${disponible_hoy_uyu:,.0f} UYU <br> <span style='font-size:16px; color:var(--subtext);'>US${disponible_hoy_usd:,.2f}</span>" if mes_solicitado == mes_actual_nombre else "-",
+            "balance": f"${balance_real_uyu:,.0f} UYU <br> <span style='font-size:16px; color:var(--subtext);'>US${balance_real_usd:,.2f}</span>",
+            "ingresos": f"${total_ingresos_filtrado_uyu:,.0f} UYU <br> <span style='font-size:14px; color:var(--subtext);'>US${total_ingresos_filtrado_usd:,.2f}</span>",
+            "gastos": f"${total_gastos_filtrado_uyu:,.0f} UYU <br> <span style='font-size:14px; color:var(--subtext);'>US${total_gastos_filtrado_usd:,.2f}</span>",
+            "prescindible": f"${total_prescindible_filtrado_uyu:,.0f} UYU <br> <span style='font-size:16px; color:var(--subtext);'>US${total_prescindible_filtrado_usd:,.2f}</span>",
             "tasa_ahorro": f"{tasa_ahorro:.1f}%",
-            "gasto_diario": f"${gasto_diario_num:,.0f}",
+            "gasto_diario": f"${gasto_diario_uyu:,.0f} UYU <br> <span style='font-size:14px; color:var(--subtext);'>US${gasto_diario_usd:,.2f}</span>",
             "top_categoria": top_cat,
             "desglose": desglose
         })

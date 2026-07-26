@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById('registroForm');
     const conceptoInput = document.getElementById('concepto');
     const montoInput = document.getElementById('monto');
+    const selectMoneda = document.getElementById('selectMoneda');
     const chkPrescindible = document.getElementById('chkPrescindible');
     const containerPrescindible = document.getElementById('containerPrescindible');
     const btnSubmit = document.getElementById('btnSubmit');
@@ -159,14 +160,14 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
-                document.getElementById('lblDisponibleHoy').textContent = data.disponible_hoy;
-                document.getElementById('lblBalance').textContent = data.balance;
-                document.getElementById('lblPrescindible').textContent = data.prescindible;
-                document.getElementById('lblIngresos').textContent = data.ingresos;
-                document.getElementById('lblGastos').textContent = data.gastos;
-                document.getElementById('lblTasaAhorro').textContent = data.tasa_ahorro;
-                document.getElementById('lblGastoDiario').textContent = data.gasto_diario;
-                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
+                document.getElementById('lblDisponibleHoy').innerHTML = data.disponible_hoy;
+                document.getElementById('lblBalance').innerHTML = data.balance;
+                document.getElementById('lblPrescindible').innerHTML = data.prescindible;
+                document.getElementById('lblIngresos').innerHTML = data.ingresos;
+                document.getElementById('lblGastos').innerHTML = data.gastos;
+                document.getElementById('lblTasaAhorro').innerHTML = data.tasa_ahorro;
+                document.getElementById('lblGastoDiario').innerHTML = data.gasto_diario;
+                document.getElementById('lblTopCategoria').innerHTML = data.top_categoria;
 
                 // Actualizar desplegable de meses sin perder selección
                 const mesActualFiltro = selectMesFiltro.value;
@@ -196,9 +197,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         divItem.className = 'desglose-item';
                         divItem.innerHTML = `
                             <span class="desglose-nombre">${item.categoria}</span>
-                            <div class="desglose-valores">
-                                <span class="desglose-monto">${item.monto}</span>
-                                <span class="desglose-pct">(${item.porcentaje})</span>
+                            <div class="desglose-valores" style="text-align: right;">
+                                <span class="desglose-monto" style="display: block;">${item.monto_uyu}</span>
+                                <span class="desglose-pct" style="display: block; margin: 0; font-size: 13px;">${item.monto_usd}</span>
                             </div>
                         `;
                         listaContainer.appendChild(divItem);
@@ -216,11 +217,12 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
         const monto = parseFloat(montoInput.value);
+        const moneda = selectMoneda.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
-        gastoPendiente = { concepto, monto, tipo: tipoActual, prescindible };
+        gastoPendiente = { concepto, monto, moneda, tipo: tipoActual, prescindible };
         enviarMovimiento(gastoPendiente);
     });
 

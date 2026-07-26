@@ -52,7 +52,15 @@
                     </div>
                     
                     <div class="form-group">
-                        <input type="number" id="monto" placeholder="Monto" required>
+                        <input type="number" step="0.01" id="monto" placeholder="Monto" required>
+                    </div>
+
+                    <!-- NUEVO SELECTOR DE MONEDA -->
+                    <div class="form-group">
+                        <select id="selectMoneda">
+                            <option value="UYU">Pesos Uruguayos ($ UYU)</option>
+                            <option value="USD">Dólares (US$ USD)</option>
+                        </select>
                     </div>
 
                     <div id="containerPrescindible" class="form-group checkbox-group">
