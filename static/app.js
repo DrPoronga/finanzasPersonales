@@ -17,14 +17,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
 
+    // Modal & Nueva Categoría
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
     const selectCategoria = document.getElementById('selectCategoria');
+    const containerNuevaCategoria = document.getElementById('containerNuevaCategoria');
+    const inputNuevaCategoria = document.getElementById('inputNuevaCategoria');
     const btnGuardarCategoria = document.getElementById('btnGuardarCategoria');
     const btnCancelarModal = document.getElementById('btnCancelarModal');
 
-    // Estado global: por defecto es Gasto ("Pasivo")
-    let tipoActual = "Pasivo";
+    let tipoActual = "Pasivo"; // "Pasivo" = Gasto, "Activo" = Ingreso
     let gastoPendiente = null;
 
     // --- MENÚ Y NAVEGACIÓN ---
@@ -37,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btnCloseMenu.addEventListener('click', toggleMenu);
     overlay.addEventListener('click', toggleMenu);
 
-    // Preparar app para Gasto
     menuGasto.addEventListener('click', (e) => {
         e.preventDefault();
         tipoActual = "Pasivo";
@@ -47,7 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleMenu();
     });
 
-    // Preparar app para Ingreso
     menuIngreso.addEventListener('click', (e) => {
         e.preventDefault();
         tipoActual = "Activo";
@@ -57,7 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleMenu();
     });
 
-    // Mostrar métricas
     menuMetricas.addEventListener('click', (e) => {
         e.preventDefault();
         mostrarVista(vistaMetricas);
@@ -128,6 +127,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
                 gastoPendiente = null;
+            } else {
+                mostrarMensaje(`Error: ${data.message}`, 'error');
             }
         } catch (error) {
             mostrarMensaje('Error de conexión', 'error');
@@ -139,24 +140,56 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // --- MODAL ---
+    // --- MODAL Y CREACIÓN DE CATEGORÍAS ---
     function abrirModal(concepto, categoriasDisponibles) {
         conceptoModal.textContent = concepto;
         selectCategoria.innerHTML = '';
+        inputNuevaCategoria.value = '';
+        containerNuevaCategoria.classList.add('hidden');
+
+        // Cargar categorías existentes
         categoriasDisponibles.forEach(cat => {
             const opt = document.createElement('option');
-            opt.value = cat; opt.textContent = cat;
+            opt.value = cat; 
+            opt.textContent = cat;
             selectCategoria.appendChild(opt);
         });
+
+        // Opción especial para crear una nueva
+        const optNueva = document.createElement('option');
+        optNueva.value = "__NUEVA__";
+        optNueva.textContent = "+ Crear nueva categoría...";
+        selectCategoria.appendChild(optNueva);
+
         modal.classList.remove('hidden');
     }
 
-    btnGuardarCategoria.addEventListener('click', () => {
-        if (gastoPendiente) {
-            gastoPendiente.nueva_categoria = selectCategoria.value;
-            modal.classList.add('hidden');
-            enviarMovimiento(gastoPendiente);
+    // Detectar si el usuario selecciona "+ Crear nueva categoría..."
+    selectCategoria.addEventListener('change', () => {
+        if (selectCategoria.value === "__NUEVA__") {
+            containerNuevaCategoria.classList.remove('hidden');
+            inputNuevaCategoria.focus();
+        } else {
+            containerNuevaCategoria.classList.add('hidden');
         }
+    });
+
+    btnGuardarCategoria.addEventListener('click', () => {
+        if (!gastoPendiente) return;
+
+        let categoriaFinal = selectCategoria.value;
+
+        if (categoriaFinal === "__NUEVA__") {
+            categoriaFinal = inputNuevaCategoria.value.trim();
+            if (!categoriaFinal) {
+                alert("Ingresa un nombre para la nueva categoría.");
+                return;
+            }
+        }
+
+        gastoPendiente.nueva_categoria = categoriaFinal;
+        modal.classList.add('hidden');
+        enviarMovimiento(gastoPendiente);
     });
 
     btnCancelarModal.addEventListener('click', () => {

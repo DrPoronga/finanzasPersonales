@@ -14,22 +14,16 @@ MESES = {
 }
 
 def conectar_google_sheets():
-    # 1. Si existe variable de entorno en Render
     json_env = os.environ.get('GOOGLE_CREDS_JSON')
-    
     if json_env:
         info_creds = json.loads(json_env)
         cliente = gspread.service_account_from_dict(info_creds)
     else:
-        # 2. Si existe el Secret File en Render o local
         ruta_creds = '/etc/secrets/credenciales.json' if os.path.exists('/etc/secrets/credenciales.json') else 'credenciales.json'
         cliente = gspread.service_account(filename=ruta_creds)
 
-    # ID de tu planilla real
     SPREADSHEET_ID = "1OZy55rSg_6Z0nu-MpCXfTofIfa_ekcDWdywDVj1wlfA"
-    
-    spreadsheet = cliente.open_by_key(SPREADSHEET_ID)
-    return spreadsheet
+    return cliente.open_by_key(SPREADSHEET_ID)
 
 def detectar_categoria(hoja_cat, concepto_ingresado):
     try:
@@ -38,19 +32,17 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
         
         for fila in registros:
             palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
-            # Buscamos si la palabra clave existe y coincide
             if palabra_clave and palabra_clave in concepto_lower:
                 return fila.get('Categoria', 'Varios'), fila.get('Tipo', 'Pasivo')
     except Exception as e:
         print(f"Aviso detectando categoría: {e}")
         
-    return None, None # Ya no retorna "Varios" por defecto, ahora retorna None para saber que no lo encontró
+    return None, None
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# ====== REGISTRAR MOVIMIENTO (GASTO O INGRESO) ======
 @app.route('/registrar_gasto', methods=['POST'])
 def registrar_gasto():
     datos = request.get_json()
@@ -61,7 +53,7 @@ def registrar_gasto():
 
     ahora = datetime.now()
     fecha_hoy = me = ahora.strftime("%d/%m/%Y")
-    hora_actual = ahora.strftime("%H:%M")
+    hora_actual = me = me = ahora.strftime("%H:%M")
     nombre_mes = MESES[ahora.month]
 
     try:
@@ -72,6 +64,7 @@ def registrar_gasto():
         if nueva_categoria:
             categoria = nueva_categoria
             tipo = tipo_ingresado
+            # Guardar la regla para futuras consultas
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
             categoria, tipo = detectar_categoria(hoja_categorias, concepto)
@@ -81,15 +74,17 @@ def registrar_gasto():
             if not categoria:
                 cat_records = hoja_categorias.col_values(2)[1:]
                 categorias_unicas = sorted(list(set([c for c in cat_records if c.strip()])))
+                
+                # Opciones por defecto si la hoja está vacía
                 if not categorias_unicas:
-                    categorias_unicas = ["Alimentación", "Sueldo", "Servicios", "Ventas", "Varios"]
+                    categorias_unicas = ["Sueldo", "Alimentación", "Servicios", "Transporte", "Venta", "Varios"]
                 
                 return jsonify({
                     "status": "needs_category",
                     "categorias": categorias_unicas
                 })
 
-        # Guardamos 7 columnas en Transacciones: Fecha, Hora, Concepto, Monto, Categoria, Mes, Tipo
+        # Guardar en Transacciones (7 columnas)
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, categoria, nombre_mes, tipo])
 
         return jsonify({
@@ -103,7 +98,6 @@ def registrar_gasto():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# ====== NUEVO ENDPOINT: OBTENER BALANCE Y METRICAS ======
 @app.route('/obtener_metricas', methods=['GET'])
 def obtener_metricas():
     try:
@@ -118,7 +112,6 @@ def obtener_metricas():
             monto = float(r.get('Monto', 0) or 0)
             tipo = str(r.get('Tipo', '')).strip().capitalize()
 
-            # Si el tipo es Activo sumar a ingresos, si es Pasivo sumar a gastos
             if tipo == 'Activo':
                 total_ingresos += monto
             else:
@@ -134,6 +127,6 @@ def obtener_metricas():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+
 if __name__ == '__main__':
     app.run(debug=True)

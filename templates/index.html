@@ -8,7 +8,7 @@
 </head>
 <body>
 
-    <!-- BARRA SUPERIOR SOLO CON MENÚ -->
+    <!-- BARRA SUPERIOR CON MENÚ -->
     <header class="navbar">
         <button id="btnMenu" class="hamburger-btn">☰</button>
     </header>
@@ -41,7 +41,7 @@
             </form>
         </section>
 
-        <!-- VISTA MÉTRICAS (Elegante y sin colores fuertes) -->
+        <!-- VISTA MÉTRICAS -->
         <section id="vistaMetricas" class="hidden">
             <div class="card balance-card">
                 <h3>Balance Real</h3>
@@ -65,13 +65,20 @@
         <div id="mensaje" class="hidden"></div>
     </div>
 
-    <!-- MODAL -->
+    <!-- MODAL DE CLASIFICACIÓN / APRENDIZAJE -->
     <div id="modalCategoria" class="modal hidden">
         <div class="modal-content">
             <h2>Clasificar</h2>
             <p>Categoría para "<span id="conceptoModal"></span>":</p>
+            
             <select id="selectCategoria"></select>
-            <button id="btnGuardarCategoria" class="btn-primary">Guardar</button>
+            
+            <!-- Campo oculto para ingresar una categoría completamente nueva -->
+            <div id="containerNuevaCategoria" class="form-group hidden" style="margin-top: 15px;">
+                <input type="text" id="inputNuevaCategoria" placeholder="Nombre de la nueva categoría">
+            </div>
+
+            <button id="btnGuardarCategoria" class="btn-primary" style="margin-top: 15px;">Guardar</button>
             <button id="btnCancelarModal" class="btn-secondary">Cancelar</button>
         </div>
     </div>
