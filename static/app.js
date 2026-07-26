@@ -1,32 +1,33 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // Vistas y Menú
     const btnMenu = document.getElementById('btnMenu');
     const btnCloseMenu = document.getElementById('btnCloseMenu');
     const sideMenu = document.getElementById('sideMenu');
     const overlay = document.getElementById('overlay');
     
-    const menuRegistrar = document.getElementById('menuRegistrar');
+    const menuGasto = document.getElementById('menuGasto');
+    const menuIngreso = document.getElementById('menuIngreso');
     const menuMetricas = document.getElementById('menuMetricas');
-    const vistaRegistrar = document.getElementById('vistaRegistrar');
+    
+    const vistaFormulario = document.getElementById('vistaFormulario');
     const vistaMetricas = document.getElementById('vistaMetricas');
 
-    // Elementos del Formulario
-    const form = document.getElementById('gastoForm');
+    const form = document.getElementById('registroForm');
     const conceptoInput = document.getElementById('concepto');
     const montoInput = document.getElementById('monto');
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
 
-    // Modal
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
     const selectCategoria = document.getElementById('selectCategoria');
     const btnGuardarCategoria = document.getElementById('btnGuardarCategoria');
     const btnCancelarModal = document.getElementById('btnCancelarModal');
 
+    // Estado global: por defecto es Gasto ("Pasivo")
+    let tipoActual = "Pasivo";
     let gastoPendiente = null;
 
-    // --- MANEJO DEL MENU HAMBURGUESA ---
+    // --- MENÚ Y NAVEGACIÓN ---
     function toggleMenu() {
         sideMenu.classList.toggle('hidden');
         overlay.classList.toggle('hidden');
@@ -36,80 +37,109 @@ document.addEventListener("DOMContentLoaded", () => {
     btnCloseMenu.addEventListener('click', toggleMenu);
     overlay.addEventListener('click', toggleMenu);
 
-    // Navegación entre Vistas
-    menuRegistrar.addEventListener('click', (e) => {
+    // Preparar app para Gasto
+    menuGasto.addEventListener('click', (e) => {
         e.preventDefault();
-        vistaRegistrar.classList.remove('hidden');
-        vistaMetricas.classList.add('hidden');
-        menuRegistrar.classList.add('active');
-        menuMetricas.classList.remove('active');
+        tipoActual = "Pasivo";
+        btnSubmit.textContent = "Registrar Gasto";
+        mostrarVista(vistaFormulario);
+        activarMenu(menuGasto);
         toggleMenu();
     });
 
+    // Preparar app para Ingreso
+    menuIngreso.addEventListener('click', (e) => {
+        e.preventDefault();
+        tipoActual = "Activo";
+        btnSubmit.textContent = "Registrar Ingreso";
+        mostrarVista(vistaFormulario);
+        activarMenu(menuIngreso);
+        toggleMenu();
+    });
+
+    // Mostrar métricas
     menuMetricas.addEventListener('click', (e) => {
         e.preventDefault();
-        vistaMetricas.classList.remove('hidden');
-        vistaRegistrar.classList.add('hidden');
-        menuMetricas.classList.add('active');
-        menuRegistrar.classList.remove('active');
+        mostrarVista(vistaMetricas);
+        activarMenu(menuMetricas);
         toggleMenu();
         cargarMetricas();
     });
 
     document.getElementById('btnActualizarMetricas').addEventListener('click', cargarMetricas);
 
-    // --- Cargar Métricas desde Backend ---
+    function mostrarVista(vista) {
+        vistaFormulario.classList.add('hidden');
+        vistaMetricas.classList.add('hidden');
+        vista.classList.remove('hidden');
+    }
+
+    function activarMenu(elementoActivo) {
+        menuGasto.classList.remove('active');
+        menuIngreso.classList.remove('active');
+        menuMetricas.classList.remove('active');
+        elementoActivo.classList.add('active');
+    }
+
+    // --- MÉTRICAS ---
     async function cargarMetricas() {
         try {
             const res = await fetch('/obtener_metricas');
             const data = await res.json();
-            if(data.status === 'success') {
+            if (data.status === 'success') {
                 document.getElementById('lblBalance').textContent = data.balance;
                 document.getElementById('lblIngresos').textContent = data.ingresos;
                 document.getElementById('lblGastos').textContent = data.gastos;
             }
-        } catch(e) {
-            console.error("Error cargando métricas:", e);
+        } catch (error) {
+            console.error("Error al cargar métricas", error);
         }
     }
 
-    // --- ENVIAR MOVIMIENTO ---
-    form.addEventListener('submit', async (e) => {
+    // --- ENVÍO DE FORMULARIO ---
+    form.addEventListener('submit', (e) => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
         const monto = parseFloat(montoInput.value);
-        const tipo = document.querySelector('input[name="tipoMovimiento"]:checked').value;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
-        gastoPendiente = { concepto, monto, tipo };
-        enviarGasto(gastoPendiente);
+        gastoPendiente = { concepto, monto, tipo: tipoActual };
+        enviarMovimiento(gastoPendiente);
     });
 
-    async function enviarGasto(datos) {
+    async function enviarMovimiento(datos) {
+        const textoOriginal = btnSubmit.textContent;
+        btnSubmit.textContent = "Procesando...";
         btnSubmit.disabled = true;
+
         try {
             const response = await fetch('/registrar_gasto', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(datos)
             });
+
             const data = await response.json();
 
             if (data.status === 'needs_category') {
                 abrirModal(datos.concepto, data.categorias);
             } else if (data.status === 'success') {
-                mostrarMensaje(`¡Registrado! (${data.tipo}: ${data.categoria})`, 'success');
+                mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
                 gastoPendiente = null;
-                btnSubmit.disabled = false;
             }
         } catch (error) {
-            mostrarMensaje('Error de conexión.', 'error');
-            btnSubmit.disabled = false;
+            mostrarMensaje('Error de conexión', 'error');
+        } finally {
+            if (!gastoPendiente) {
+                btnSubmit.textContent = textoOriginal;
+                btnSubmit.disabled = false;
+            }
         }
     }
 
+    // --- MODAL ---
     function abrirModal(concepto, categoriasDisponibles) {
         conceptoModal.textContent = concepto;
         selectCategoria.innerHTML = '';
@@ -125,19 +155,20 @@ document.addEventListener("DOMContentLoaded", () => {
         if (gastoPendiente) {
             gastoPendiente.nueva_categoria = selectCategoria.value;
             modal.classList.add('hidden');
-            enviarGasto(gastoPendiente);
+            enviarMovimiento(gastoPendiente);
         }
     });
 
     btnCancelarModal.addEventListener('click', () => {
         modal.classList.add('hidden');
         gastoPendiente = null;
+        btnSubmit.textContent = tipoActual === "Activo" ? "Registrar Ingreso" : "Registrar Gasto";
         btnSubmit.disabled = false;
     });
 
     function mostrarMensaje(texto, tipo) {
         mensajeDiv.textContent = texto;
         mensajeDiv.className = tipo;
-        setTimeout(() => { mensajeDiv.className = 'hidden'; }, 4000);
+        setTimeout(() => { mensajeDiv.className = 'hidden'; }, 3000);
     }
 });

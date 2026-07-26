@@ -1,70 +1,147 @@
 :root {
-    --primary: #4F46E5;
-    --primary-hover: #4338CA;
-    --bg: #F3F4F6;
+    --primary: #171717; /* Negro/Gris muy oscuro y elegante */
+    --primary-hover: #333333;
+    --bg: #FAFAFA; /* Fondo muy limpio */
     --surface: #FFFFFF;
-    --text: #1F2937;
-    --border: #E5E7EB;
+    --text: #171717;
+    --border: #E5E5E5;
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
     background-color: var(--bg);
     color: var(--text);
     margin: 0;
-    padding: 20px;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
 }
 
-.container {
-    background: var(--surface);
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+/* NAVBAR SÚPER LIMPIA */
+.navbar {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    max-width: 400px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    z-index: 100;
 }
 
-h1 {
-    text-align: center;
-    margin-top: 0;
-    margin-bottom: 25px;
+.hamburger-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: var(--text);
+    padding: 0;
+    margin: 0;
+}
+
+/* MENÚ LATERAL */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 280px;
+    background: var(--surface);
+    z-index: 1000;
+    box-shadow: 5px 0 15px rgba(0,0,0,0.05);
+    padding: 30px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.side-menu.hidden {
+    transform: translateX(-100%);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: var(--text);
+    cursor: pointer;
+    float: right;
+    padding: 0;
+}
+
+.side-menu ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 60px;
+}
+
+.side-menu li { margin-bottom: 10px; }
+
+.side-menu a {
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 500;
+    font-size: 18px;
+    display: block;
+    padding: 15px;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.side-menu a.active, .side-menu a:hover {
+    background-color: var(--bg);
+}
+
+.overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.3);
+    z-index: 999;
+}
+
+/* CONTENEDOR PRINCIPAL INVISIBLE (Solo inputs y botón) */
+.container {
+    width: 100%;
+    max-width: 380px;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-}
-
+/* INPUTS ELEGANTES */
 input, select {
     width: 100%;
-    padding: 12px;
+    padding: 18px 20px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 12px;
     box-sizing: border-box;
-    font-size: 16px;
+    font-size: 18px;
+    background: var(--surface);
+    transition: border 0.3s;
 }
 
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* BOTÓN EL DOBLE DE ALTO */
 button {
     width: 100%;
-    padding: 14px;
+    padding: 28px 15px; /* Altura multiplicada x2 */
     background-color: var(--primary);
     color: white;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    border-radius: 12px;
+    font-size: 20px;
     font-weight: 600;
+    letter-spacing: 0.5px;
     cursor: pointer;
     transition: background-color 0.2s;
-    margin-bottom: 10px;
 }
 
 button:hover {
@@ -72,196 +149,72 @@ button:hover {
 }
 
 .btn-secondary {
-    background-color: #9CA3AF;
-}
-.btn-secondary:hover {
-    background-color: #6B7280;
+    background-color: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
 }
 
-.hidden {
-    display: none !important;
+.btn-secondary:hover {
+    background-color: var(--bg);
 }
+
+/* MENSAJES Y CARDS */
+.hidden { display: none !important; }
 
 #mensaje {
-    margin-top: 20px;
-    padding: 15px;
-    border-radius: 8px;
+    margin-top: 25px;
+    padding: 18px;
+    border-radius: 12px;
     text-align: center;
-    font-weight: 600;
+    font-weight: 500;
 }
-
-.success {
-    background-color: #D1FAE5;
-    color: #065F46;
-}
-
-.error {
-    background-color: #FEE2E2;
-    color: #991B1B;
-}
-
-/* ============================
-   ESTILOS DEL MODAL (NUEVO)
-   ============================ */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: var(--surface);
-    padding: 30px;
-    border-radius: 15px;
-    width: 90%;
-    max-width: 350px;
-    text-align: center;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
-}
-
-.modal-content h2 {
-    margin-top: 0;
-    color: var(--primary);
-}
-
-.modal-content p {
-    font-size: 15px;
-    margin-bottom: 20px;
-}
-
-.modal-content select {
-    margin-bottom: 25px;
-}
-
-/* NAVBAR & MENU HAMBURGUESA */
-.navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    background: var(--surface);
-    display: flex;
-    align-items: center;
-    padding: 10px 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    z-index: 100;
-}
-
-.hamburger-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    width: auto;
-    padding: 5px 10px;
-    margin: 0;
-    color: var(--text);
-}
-
-.logo {
-    font-size: 18px;
-    margin: 0 0 0 15px;
-}
-
-/* MENU LATERAL */
-.side-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 250px;
-    background: var(--surface);
-    z-index: 1000;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-    padding: 20px;
-    transition: transform 0.3s ease;
-}
-
-.side-menu.hidden {
-    display: block !important;
-    transform: translateX(-100%);
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: var(--text);
-    cursor: pointer;
-    float: right;
-    width: auto;
-}
-
-.side-menu ul {
-    list-style: none;
-    padding: 0;
-    margin-top: 50px;
-}
-
-.side-menu li { margin-bottom: 15px; }
-
-.side-menu a {
-    text-decoration: none;
-    color: var(--text);
-    font-weight: 600;
-    font-size: 16px;
-    display: block;
-    padding: 10px;
-    border-radius: 8px;
-}
-
-.side-menu a.active, .side-menu a:hover {
-    background-color: var(--bg);
-    color: var(--primary);
-}
-
-.overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0,0,0,0.4);
-    z-index: 999;
-}
-
-/* CARDS DE BALANCE Y METRICAS */
-.tipo-selector {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.tipo-selector label {
-    font-weight: normal;
-    cursor: pointer;
-}
+.success { background-color: var(--primary); color: white; }
+.error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
 .card {
-    background: var(--bg);
-    padding: 15px;
-    border-radius: 10px;
+    background: var(--surface);
+    padding: 25px 20px;
+    border-radius: 12px;
     text-align: center;
     margin-bottom: 15px;
+    border: 1px solid var(--border);
+}
+
+.card h3, .card h4 {
+    margin: 0 0 10px 0;
+    font-weight: 400;
+    color: #666666;
 }
 
 .monto-destacado {
-    font-size: 28px;
-    font-weight: bold;
-    color: #10B981;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--text);
 }
 
 .metricas-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 15px;
 }
 
-.ingreso-card h4, .gasto-card h4 { margin: 0 0 5px 0; font-size: 14px; }
-.ingreso-card span { color: #10B981; font-weight: bold; font-size: 18px; }
-.gasto-card span { color: #EF4444; font-weight: bold; font-size: 18px; }
+.metricas-grid span {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text);
+}
 
+/* MODAL SERIO */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: var(--surface); padding: 35px; border-radius: 16px;
+    width: 90%; max-width: 350px; text-align: center;
+}
+.modal-content h2 { margin-top: 0; font-weight: 500; }
+.modal-content select { margin: 25px 0; }
+.modal-content button { margin-bottom: 10px; padding: 18px; }
