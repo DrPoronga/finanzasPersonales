@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import os
+import json
+import traceback
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 
@@ -13,16 +14,18 @@ MESES = {
 }
 
 def conectar_google_sheets():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    # 1. Si existe variable de entorno en Render
+    json_env = os.environ.get('GOOGLE_CREDS_JSON')
     
-    # Render guarda los Secret Files en /etc/secrets/
-    if os.path.exists('/etc/secrets/credenciales.json'):
-        ruta_creds = '/etc/secrets/credenciales.json'
+    if json_env:
+        info_creds = json.loads(json_env)
+        cliente = gspread.service_account_from_dict(info_creds)
     else:
-        ruta_creds = 'credenciales.json'
+        # 2. Si existe el Secret File en Render (/etc/secrets/credenciales.json) o local
+        ruta_creds = '/etc/secrets/credenciales.json' if os.path.exists('/etc/secrets/credenciales.json') else 'credenciales.json'
+        cliente = gspread.service_account(filename=ruta_creds)
 
-    creds = ServiceAccountCredentials.from_json_keyfile_name(ruta_creds, scope)
-    cliente = gspread.authorize(creds)
+    # Abre la planilla por su nombre exacto
     spreadsheet = cliente.open("FinanzasPersonales_data")
     return spreadsheet
 
@@ -36,7 +39,7 @@ def detectar_categoria(hoja_cat, concepto_ingresado):
             if palabra_clave and palabra_clave in concepto_lower:
                 return fila.get('Categoria', 'Varios'), fila.get('Tipo', 'Pasivo')
     except Exception as e:
-        print(f"Error detectando categoría: {e}")
+        print(f"Aviso detectando categoría: {e}")
         
     return "Varios", "Pasivo"
 
@@ -69,8 +72,8 @@ def registrar_gasto():
 
         # 3. Actualizar Resumen (si el concepto coincide)
         try:
-            conceptos_resumen = hoja_resumen.col_values(2)
-            encabezados = hoja_resumen.row_values(1)
+            conceptos_resumen = hoja_resumen.col_values(2) # Columna B
+            encabezados = hoja_resumen.row_values(1)       # Fila 1
 
             if concepto.upper() in [c.upper() for c in conceptos_resumen] and nombre_mes in encabezados:
                 fila_idx = [c.upper() for c in conceptos_resumen].index(concepto.upper()) + 1
@@ -92,7 +95,8 @@ def registrar_gasto():
         })
 
     except Exception as e:
-        print(f"❌ ERROR: {e}")
+        print(f"❌ ERROR DETALLADO:")
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == '__main__':
