@@ -160,19 +160,39 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
-                document.getElementById('lblDisponibleHoy').innerHTML = data.disponible_hoy;
-                document.getElementById('lblBalance').innerHTML = data.balance;
-                document.getElementById('lblPrescindible').innerHTML = data.prescindible;
-                document.getElementById('lblIngresos').innerHTML = data.ingresos;
-                document.getElementById('lblGastos').innerHTML = data.gastos;
-                document.getElementById('lblTasaAhorro').innerHTML = data.tasa_ahorro;
-                document.getElementById('lblGastoDiario').innerHTML = data.gasto_diario;
-                document.getElementById('lblTopCategoria').innerHTML = data.top_categoria;
+                // Disponible hoy
+                document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
+                document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
 
-                // Actualizar desplegable de meses sin perder selección
-                const mesActualFiltro = selectMesFiltro.value;
+                // Dinero en el banco
+                document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
+                document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
+
+                // Prescindibles
+                document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
+                document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
+
+                // Ingresos
+                document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
+                document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
+
+                // Gastos
+                document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
+                document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
+
+                // Promedio diario
+                document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
+                document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
+
+                // Tasa de ahorro
+                document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
+                document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
+
+                // Mayor categoría
+                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
+
+                // Actualizar desplegable de meses
                 selectMesFiltro.innerHTML = '';
-
                 data.meses_disponibles.forEach(mes => {
                     const opt = document.createElement('option');
                     opt.value = mes;
@@ -187,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Renderizar desglose
+                // Renderizar desglose por categoría con igual peso para USD y UYU
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -195,11 +215,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     data.desglose.forEach(item => {
                         const divItem = document.createElement('div');
                         divItem.className = 'desglose-item';
+                        
+                        let valoresHtml = '';
+                        if (item.monto_usd) {
+                            valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+                        }
+                        if (item.monto_uyu) {
+                            valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
+                        }
+
                         divItem.innerHTML = `
                             <span class="desglose-nombre">${item.categoria}</span>
-                            <div class="desglose-valores" style="text-align: right;">
-                                <span class="desglose-monto" style="display: block;">${item.monto_uyu}</span>
-                                <span class="desglose-pct" style="display: block; margin: 0; font-size: 13px;">${item.monto_usd}</span>
+                            <div class="desglose-valores">
+                                ${valoresHtml}
                             </div>
                         `;
                         listaContainer.appendChild(divItem);

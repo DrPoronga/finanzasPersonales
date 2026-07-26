@@ -44,7 +44,7 @@
 
         <div class="container">
             
-            <!-- VISTA PRINCIPAL -->
+            <!-- VISTA PRINCIPAL (FORMULARIO) -->
             <section id="vistaFormulario">
                 <form id="registroForm">
                     <div class="form-group">
@@ -55,11 +55,10 @@
                         <input type="number" step="0.01" id="monto" placeholder="Monto" required>
                     </div>
 
-                    <!-- NUEVO SELECTOR DE MONEDA -->
                     <div class="form-group">
                         <select id="selectMoneda">
-                            <option value="UYU">Pesos Uruguayos ($ UYU)</option>
                             <option value="USD">Dólares (US$ USD)</option>
+                            <option value="UYU">Pesos Uruguayos ($ UYU)</option>
                         </select>
                     </div>
 
@@ -85,46 +84,103 @@
                 <!-- TARJETA DESTACADA: DISPONIBLE HOY -->
                 <div class="card disponible-card">
                     <h3>Disponible para hoy</h3>
-                    <span id="lblDisponibleHoy" class="monto-destacado">$0</span>
+                    <div class="monto-dual">
+                        <div class="monto-linea">
+                            <span class="monto-moneda">USD</span>
+                            <span id="lblDisponibleHoyUSD" class="monto-valor">US$0</span>
+                        </div>
+                        <div class="monto-linea">
+                            <span class="monto-moneda">UYU</span>
+                            <span id="lblDisponibleHoyUYU" class="monto-valor">$0</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- DINERO EN EL BANCO -->
                 <div class="card balance-card">
                     <h3>Dinero en el banco</h3>
-                    <span id="lblBalance" class="monto-destacado">$0</span>
+                    <div class="monto-dual">
+                        <div class="monto-linea">
+                            <span class="monto-moneda">USD</span>
+                            <span id="lblBalanceUSD" class="monto-valor">US$0</span>
+                        </div>
+                        <div class="monto-linea">
+                            <span class="monto-moneda">UYU</span>
+                            <span id="lblBalanceUYU" class="monto-valor">$0</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- GASTOS PRESCINDIBLES -->
                 <div class="card prescindible-card">
                     <h3>Gastos que podría haber ahorrado</h3>
-                    <span id="lblPrescindible" class="monto-destacado">$0</span>
+                    <div class="monto-dual">
+                        <div class="monto-linea">
+                            <span class="monto-moneda">USD</span>
+                            <span id="lblPrescindibleUSD" class="monto-valor">US$0</span>
+                        </div>
+                        <div class="monto-linea">
+                            <span class="monto-moneda">UYU</span>
+                            <span id="lblPrescindibleUYU" class="monto-valor">$0</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- INGRESOS -->
                 <div class="metricas-grid">
                     <div class="card">
-                        <h4>Ingresos</h4>
-                        <span id="lblIngresos">$0</span>
+                        <h4>Ingresos USD</h4>
+                        <span id="lblIngresosUSD">US$0</span>
                     </div>
                     <div class="card">
-                        <h4>Gastos</h4>
-                        <span id="lblGastos">$0</span>
+                        <h4>Ingresos UYU</h4>
+                        <span id="lblIngresosUYU">$0</span>
                     </div>
                 </div>
 
+                <!-- GASTOS -->
                 <div class="metricas-grid">
                     <div class="card">
-                        <h4>Tasa de Ahorro</h4>
-                        <span id="lblTasaAhorro">0%</span>
+                        <h4>Gastos USD</h4>
+                        <span id="lblGastosUSD">US$0</span>
                     </div>
                     <div class="card">
-                        <h4>Promedio Diario</h4>
-                        <span id="lblGastoDiario">$0</span>
+                        <h4>Gastos UYU</h4>
+                        <span id="lblGastosUYU">$0</span>
                     </div>
                 </div>
 
+                <!-- PROMEDIO DIARIO -->
+                <div class="metricas-grid">
+                    <div class="card">
+                        <h4>Prom. Diario USD</h4>
+                        <span id="lblGastoDiarioUSD">US$0</span>
+                    </div>
+                    <div class="card">
+                        <h4>Prom. Diario UYU</h4>
+                        <span id="lblGastoDiarioUYU">$0</span>
+                    </div>
+                </div>
+
+                <!-- TASA DE AHORRO -->
+                <div class="metricas-grid">
+                    <div class="card">
+                        <h4>Tasa Ahorro USD</h4>
+                        <span id="lblTasaAhorroUSD">0%</span>
+                    </div>
+                    <div class="card">
+                        <h4>Tasa Ahorro UYU</h4>
+                        <span id="lblTasaAhorroUYU">0%</span>
+                    </div>
+                </div>
+
+                <!-- MAYOR CATEGORÍA DE GASTO -->
                 <div class="card">
                     <h4>Mayor Categoría de Gasto</h4>
                     <span id="lblTopCategoria" style="font-size: 20px; font-weight: 600;">-</span>
                 </div>
 
+                <!-- DESGLOSE DE GASTOS POR CATEGORÍA -->
                 <div class="card desglose-card">
                     <h4>Gastos por Categoría</h4>
                     <div id="listaDesglose"></div>
@@ -136,7 +192,7 @@
             <div id="mensaje" class="hidden"></div>
         </div>
 
-        <!-- MODAL -->
+        <!-- MODAL CLASIFICAR CATEGORÍA -->
         <div id="modalCategoria" class="modal hidden">
             <div class="modal-content">
                 <h2>Clasificar</h2>

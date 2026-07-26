@@ -181,10 +181,6 @@ button:hover {
     color: #A3A3A3;
 }
 
-.disponible-card .monto-destacado {
-    color: white;
-}
-
 .card {
     background: var(--surface);
     padding: 22px 20px;
@@ -203,10 +199,43 @@ button:hover {
     letter-spacing: 0.5px;
 }
 
-.monto-destacado {
-    font-size: 34px;
+/* FORMATO DUAL DE DÓLARES Y PESOS */
+.monto-dual {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.monto-linea {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.monto-valor {
+    font-size: 26px;
     font-weight: 600;
-    color: var(--text);
+}
+
+.disponible-card .monto-valor {
+    color: white;
+}
+
+.monto-moneda {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--subtext);
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.disponible-card .monto-moneda {
+    color: #A3A3A3;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .metricas-grid {
@@ -252,16 +281,14 @@ button:hover {
 
 .desglose-valores {
     text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 .desglose-monto {
     font-weight: 600;
-}
-
-.desglose-pct {
-    font-size: 12px;
-    color: var(--subtext);
-    margin-left: 6px;
+    font-size: 14px;
 }
 
 .modal {
@@ -335,9 +362,4 @@ button:hover {
 .prescindible-card {
     border: 1px dashed var(--subtext);
     background: #F5F5F5;
-}
-
-.prescindible-card #lblPrescindible {
-    font-size: 28px;
-    color: var(--text);
 }
