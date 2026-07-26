@@ -60,11 +60,11 @@ def detectar_categoria(registros_cat, concepto_ingresado):
         for fila in registros_cat:
             palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
             if palabra_clave and palabra_clave in concepto_lower:
-                return fila.get('Categoria', 'Varios'), fila.get('Tipo', 'Pasivo')
+                return fila.get('Categoria', 'Varios')
     except Exception as e:
         print(f"Aviso detectando categoría: {e}")
         
-    return None, None
+    return None
 
 @app.route('/')
 def home():
@@ -99,7 +99,7 @@ def registrar_gasto():
     concepto = datos.get('concepto', '').strip()
     monto = float(datos.get('monto', 0))
     moneda = datos.get('moneda', 'USD').upper().strip()
-    tipo_ingresado = datos.get('tipo', 'Pasivo')
+    tipo_ingresado = datos.get('tipo', 'Pasivo')  # 'Activo' o 'Pasivo'
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
 
@@ -113,15 +113,15 @@ def registrar_gasto():
         hoja_transacciones = doc.worksheet("Transacciones")
         hoja_categorias = doc.worksheet("Categorias")
 
+        # El tipo siempre es prioritario y respeta la vista activa del formulario
+        tipo = tipo_ingresado
+
         if nueva_categoria:
             categoria = nueva_categoria
-            tipo = tipo_ingresado
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
             registros_cat = hoja_categorias.get_all_records()
-            categoria, tipo = detectar_categoria(registros_cat, concepto)
-            if not tipo: 
-                tipo = tipo_ingresado
+            categoria = detectar_categoria(registros_cat, concepto)
 
             if not categoria:
                 cat_existentes = set([str(r.get('Categoria', '')).strip() for r in registros_cat if str(r.get('Categoria', '')).strip()])
@@ -180,7 +180,7 @@ def obtener_metricas():
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
-            # Acumulado total
+            # 1. Banco (Histórico Acumulado)
             if moneda == 'USD':
                 if tipo == 'Activo': ingresos_acum_usd += monto
                 else: gastos_acum_usd += monto
@@ -188,26 +188,30 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_acum_uyu += monto
                 else: gastos_acum_uyu += monto
 
-            # Filtro por mes
+            # 2. Filtro por mes
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
-                if cat not in gastos_por_categoria:
-                    gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
-
-                if moneda == 'USD':
-                    if tipo == 'Activo':
+                if tipo == 'Activo':
+                    # Los Activos solo suman a Ingresos
+                    if moneda == 'USD':
                         ingresos_filtrado_usd += monto
                     else:
+                        ingresos_filtrado_uyu += monto
+                else:
+                    # Únicamente los Pasivos van a la lista de gastos y desglose
+                    if cat not in gastos_por_categoria:
+                        gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
+
+                    if moneda == 'USD':
                         gastos_filtrado_usd += monto
                         gastos_por_categoria[cat]['USD'] += monto
-                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_usd += monto
-                else:
-                    if tipo == 'Activo':
-                        ingresos_filtrado_uyu += monto
+                        if presc in ['Sí', 'Si', 'True']:
+                            prescindible_filtrado_usd += monto
                     else:
                         gastos_filtrado_uyu += monto
                         gastos_por_categoria[cat]['UYU'] += monto
-                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
+                        if presc in ['Sí', 'Si', 'True']:
+                            prescindible_filtrado_uyu += monto
 
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
@@ -225,11 +229,11 @@ def obtener_metricas():
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
 
-        # Tasa Ahorro
+        # Tasa de Ahorro
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Mayor Categoria
+        # Mayor Categoria (evalúa solo categorías de gastos)
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
