@@ -1,16 +1,14 @@
 document.getElementById('gasto-form').addEventListener('submit', async function(e) {
-    e.preventDefault(); // Evita que la página se recargue
+    e.preventDefault();
 
-    // Capturamos los valores
     const concepto = document.getElementById('concepto').value;
     const monto = document.getElementById('monto').value;
     const btn = document.querySelector('.btn-gasto');
+    const resultadoDiv = document.getElementById('resultado');
 
-    // Cambiamos el texto del botón mientras carga
     btn.innerText = "REGISTRANDO...";
 
     try {
-        // Enviamos los datos al backend (Python)
         const respuesta = await fetch('/registrar_gasto', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -20,18 +18,20 @@ document.getElementById('gasto-form').addEventListener('submit', async function(
         const datos = await respuesta.json();
 
         if (datos.status === 'success') {
-            // Mostramos mensaje de éxito y vaciamos los campos
             document.getElementById('gasto-form').reset();
-            const mensaje = document.getElementById('mensaje-exito');
-            mensaje.style.display = 'block';
             
-            // Ocultamos el mensaje a los 3 segundos
+            document.getElementById('mensaje-exito').innerText = "¡Gasto registrado!";
+            document.getElementById('detalle-categoria').innerText = `Categoría: ${datos.categoria} (${datos.tipo})`;
+            resultadoDiv.classList.remove('oculto');
+            
             setTimeout(() => {
-                mensaje.style.display = 'none';
-            }, 3000);
+                resultadoDiv.classList.add('oculto');
+            }, 4000);
+        } else {
+            alert("Error: " + datos.message);
         }
     } catch (error) {
-        alert("Hubo un error al registrar el gasto.");
+        alert("Hubo un problema de conexión.");
     } finally {
         btn.innerText = "REGISTRAR GASTO";
     }

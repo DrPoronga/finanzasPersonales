@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Finanzas | Activos vs Pasivos</title>
+    <title>Mis Finanzas | Registro Inteligente</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
         <h1 class="title">Control Financiero</h1>
-        <p class="subtitle">Activos vs Pasivos</p>
+        <p class="subtitle">Registro Diario de Gastos</p>
 
         <div class="card">
             <form id="gasto-form">
-                <label for="concepto">¿En qué gastaste?</label>
-                <input type="text" id="concepto" placeholder="agregar nombre..." required autocomplete="off">
+                <label for="concepto">¿Qué compraste / pagaste?</label>
+                <input type="text" id="concepto" placeholder="Ej: manteca, UTE, nafta..." required autocomplete="off">
 
-                <label for="monto">¿Cuánto?</label>
+                <label for="monto">¿Cuánto fue?</label>
                 <div class="input-group">
                     <span class="currency">$</span>
                     <input type="number" id="monto" placeholder="0" required min="1">
@@ -24,7 +24,11 @@
 
                 <button type="submit" class="btn-gasto">REGISTRAR GASTO</button>
             </form>
-            <p id="mensaje-exito" class="oculto">¡Gasto registrado con éxito!</p>
+            
+            <div id="resultado" class="oculto">
+                <p id="mensaje-exito"></p>
+                <p id="detalle-categoria" class="badge"></p>
+            </div>
         </div>
     </div>
     
