@@ -169,6 +169,11 @@ def obtener_metricas():
         gastos_por_categoria = {}
         meses_encontrados = set()
 
+        # Estructuras para el Pronóstico de Gastos Fijos (No Prescindibles)
+        # { 'USD': { 'Alimentacion': { 'MES1': 100, 'MES2': 120 } } }
+        historial_fijos = {'USD': {}, 'UYU': {}}
+        pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
+
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
             moneda = str(r.get('Moneda', 'UYU')).strip().upper() or 'UYU'
@@ -180,6 +185,8 @@ def obtener_metricas():
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
+            es_no_prescindible = presc in ['No', 'False', '']
+
             # 1. Banco (Histórico Acumulado)
             if moneda == 'USD':
                 if tipo == 'Activo': ingresos_acum_usd += monto
@@ -188,43 +195,69 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_acum_uyu += monto
                 else: gastos_acum_uyu += monto
 
-            # 2. Filtro por mes
+            # 2. Mapeo para el Pronóstico (Solo Pasivos NO prescindibles)
+            if tipo == 'Pasivo' and es_no_prescindible and mes_registro:
+                if cat not in historial_fijos[moneda]:
+                    historial_fijos[moneda][cat] = {}
+                historial_fijos[moneda][cat][mes_registro] = historial_fijos[moneda][cat].get(mes_registro, 0.0) + monto
+
+                if mes_registro == mes_actual_nombre:
+                    pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
+
+            # 3. Filtro por mes solicitado para métricas de pantalla
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
                 if tipo == 'Activo':
-                    # Los Activos solo suman a Ingresos
-                    if moneda == 'USD':
-                        ingresos_filtrado_usd += monto
-                    else:
-                        ingresos_filtrado_uyu += monto
+                    if moneda == 'USD': ingresos_filtrado_usd += monto
+                    else: ingresos_filtrado_uyu += monto
                 else:
-                    # Únicamente los Pasivos van a la lista de gastos y desglose
                     if cat not in gastos_por_categoria:
                         gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
 
                     if moneda == 'USD':
                         gastos_filtrado_usd += monto
                         gastos_por_categoria[cat]['USD'] += monto
-                        if presc in ['Sí', 'Si', 'True']:
-                            prescindible_filtrado_usd += monto
+                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_usd += monto
                     else:
                         gastos_filtrado_uyu += monto
                         gastos_por_categoria[cat]['UYU'] += monto
-                        if presc in ['Sí', 'Si', 'True']:
-                            prescindible_filtrado_uyu += monto
+                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
 
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
 
-        # Disponible para hoy
+        # CÁLCULO DEL PRONÓSTICO DE COMPROMISOS PENDIENTES
+        compromisos_pendientes_usd = 0.0
+        compromisos_pendientes_uyu = 0.0
+
+        for mon in ['USD', 'UYU']:
+            pendientes_totales = 0.0
+            for cat, meses_data in historial_fijos[mon].items():
+                # Consideramos gasto fijo si ha aparecido en al menos 2 meses o en el mes actual
+                cant_meses = len(meses_data)
+                if cant_meses >= 1:
+                    promedio_mensual = sum(meses_data.values()) / cant_meses
+                    ya_pagado = pagado_fijos_mes_actual[mon].get(cat, 0.0)
+                    pendiente_cat = max(0.0, promedio_mensual - ya_pagado)
+                    pendientes_totales += pendiente_cat
+
+            if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
+            else: compromisos_pendientes_uyu = pendientes_totales
+
+        # CÁLCULO DEL DISPONIBLE PARA HOY CON PRONÓSTICO
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
-            disponible_hoy_usd = max(0.0, balance_real_usd / dias_restantes)
-            disponible_hoy_uyu = max(0.0, balance_real_uyu / dias_restantes)
+            
+            # Restamos los compromisos fijos pendientes antes de dividir entre los días
+            balance_disponible_usd = max(0.0, balance_real_usd - compromisos_pendientes_usd)
+            balance_disponible_uyu = max(0.0, balance_real_uyu - compromisos_pendientes_uyu)
 
-        # Promedio Diario
+            disponible_hoy_usd = balance_disponible_usd / dias_restantes
+            disponible_hoy_uyu = balance_disponible_uyu / dias_restantes
+
+        # Promedio diario del mes
         divisor_dias = max(1, ahora.day) if mes_solicitado == mes_actual_nombre else 30
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
@@ -233,7 +266,7 @@ def obtener_metricas():
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Mayor Categoria (evalúa solo categorías de gastos)
+        # Mayor categoría
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
@@ -276,6 +309,6 @@ def obtener_metricas():
         traceback.print_exc()
         SESSIONS_CACHE["doc"] = None
         return jsonify({"status": "error", "message": str(e)}), 500
-
+        
 if __name__ == '__main__':
     app.run(debug=True)
