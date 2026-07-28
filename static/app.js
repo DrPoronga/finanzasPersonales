@@ -55,6 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
     let detallesTransaccionesCache = [];
+	let gastosFijosCache = [];
+    const cardFijos = document.getElementById('cardFijos');
 
     checkAutenticacion();
 	
@@ -182,9 +184,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 const listaFijos = document.getElementById('listaFijos');
                 if (listaFijos) {
                     listaFijos.innerHTML = '';
-                    if (data.fijos && data.fijos.length > 0) {
-                        data.fijos.forEach(fijo => {
-                            // 1. Crear el contenedor de cada fila
+                    gastosFijosCache = data.fijos || [];
+
+                    // Muestra únicamente los primeros 3 (los pendientes siempre van primero desde el backend)
+                    const top3 = gastosFijosCache.slice(0, 3);
+
+                    if (top3.length > 0) {
+                        top3.forEach(fijo => {
                             const itemDiv = document.createElement('div');
                             itemDiv.className = 'fijo-item';
 
@@ -208,12 +214,12 @@ document.addEventListener("DOMContentLoaded", () => {
                                 </div>
                             `;
 
-                            // 2. Insertar la fila dentro de la lista
                             listaFijos.appendChild(itemDiv);
                         });
                     }
                 }
-                necesitaRecargarMetricas = false;
+				
+				necesitaRecargarMetricas = false;
                 detallesTransaccionesCache = data.detalles || [];
 
                 // Contadores para Badges de Movimientos
@@ -336,7 +342,14 @@ document.addEventListener("DOMContentLoaded", () => {
         abrirModalDetalles('gastos');
     });
 
-    // ABRIR Y MOSTRAR DETALLES
+	// AGREGAR ESTO AQUÍ ABAJO:
+    if (cardFijos) {
+        cardFijos.addEventListener('click', () => {
+            abrirModalDetalles('fijos');
+        });
+    }
+	
+// ABRIR Y MOSTRAR DETALLES
     function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
         let listaFiltrada = [];
         let titulo = '';
@@ -353,11 +366,55 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (filtroTipo === 'categoria') {
             titulo = `Gastos en ${categoriaNombre}`;
             listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.categoria === categoriaNombre);
+        } else if (filtroTipo === 'fijos') {
+            titulo = 'Control de Gastos Fijos';
         }
 
         tituloModalDetalle.textContent = titulo;
 
-        // Sumas acumuladas
+        // Si es el modal de gastos fijos
+        if (filtroTipo === 'fijos') {
+            const pend = gastosFijosCache.filter(f => f.estado === 'Pendiente').length;
+            const pag = gastosFijosCache.filter(f => f.estado === 'Pagado').length;
+
+            resumenModalDetalle.innerHTML = `
+                <div>Pendientes: <span>${pend}</span></div>
+                <div>Pagados: <span>${pag}</span></div>
+            `;
+
+            listaModalDetalle.innerHTML = '';
+            gastosFijosCache.forEach(fijo => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'detalle-item';
+
+                const esPagado = fijo.estado === 'Pagado';
+                const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+
+                const textoSub = esPagado 
+                    ? `Pagado: ${montoFmt}` 
+                    : `Pendiente de pago`;
+
+                itemDiv.innerHTML = `
+                    <div class="detalle-info">
+                        <span class="detalle-concepto">${fijo.concepto}</span>
+                        <div class="detalle-sub">
+                            <span>${textoSub}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
+                    </div>
+                `;
+                listaModalDetalle.appendChild(itemDiv);
+            });
+
+            modalDetalle.classList.remove('hidden');
+            return;
+        }
+
+        // Lógica para los demás botones (Prescindibles, Ingresos, Gastos, Categoría)
         let sumUSD = 0;
         let sumUYU = 0;
         listaFiltrada.forEach(item => {
