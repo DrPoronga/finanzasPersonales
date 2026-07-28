@@ -55,17 +55,16 @@
                         <input type="number" step="0.01" id="monto" placeholder="Monto" required>
                     </div>
 
-                    <!-- RUEDA DE MONEDA TIPO IOS -->
-                    <div class="form-group wheel-group">
-                        <label class="wheel-label">Moneda</label>
-                        <div class="wheel-picker-wrapper">
-                            <div class="wheel-picker-overlay"></div>
-                            <div class="wheel-picker" id="wheelMoneda">
-                                <div class="wheel-space"></div>
-                                <div class="wheel-item active" data-value="UYU">Pesos Uruguayos ($ UYU)</div>
-                                <div class="wheel-item" data-value="USD">Dólares (US$ USD)</div>
-                                <div class="wheel-space"></div>
-                            </div>
+                    <!-- SELECTOR DE MONEDA ESTILO PASTILLA (TOGGLE) -->
+                    <div class="form-group">
+                        <div class="currency-toggle">
+                            <input type="radio" id="monedaUYU" name="monedaRadio" value="UYU" checked>
+                            <label for="monedaUYU">Pesos (UYU)</label>
+
+                            <input type="radio" id="monedaUSD" name="monedaRadio" value="USD">
+                            <label for="monedaUSD">Dólares (USD)</label>
+                            
+                            <div class="toggle-slider"></div>
                         </div>
                         <input type="hidden" id="selectMoneda" value="UYU">
                     </div>

@@ -406,28 +406,57 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
-# === CÁLCULO DE DETALLES DE GASTOS FIJOS PARA LA INTERFAZ ===
+# === LISTA FIJA DE CONTROL DE VENCIMIENTOS ===
+        GASTOS_FIJOS_DECLARADOS = [
+            "UTE", "PATENTE AUTO", "ANTEL", 
+            "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
+            "PRESTAMO OCA", "PRESTAMO VW GOL", 
+            "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
+            "TARJETA ITAU PESOS", "TARJETA ITAU DOLARES", 
+            "TARJETA SANTANDER PESOS", "TARJETA SANTANDER DOLARES", 
+            "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
+        ]
+
         detalles_fijos = []
-        for mon in ['UYU', 'USD']:
-            for cat, meses_data in historial_fijos[mon].items():
-                cant_meses = len(meses_data)
-                if cant_meses >= 1:
-                    promedio_mensual = sum(meses_data.values()) / cant_meses
-                    ya_pagado = pagado_fijos_mes_actual[mon].get(cat, 0.0)
-                    pendiente = max(0.0, promedio_mensual - ya_pagado)
-                    
-                    if promedio_mensual > 0:
-                        detalles_fijos.append({
-                            "categoria": cat,
-                            "moneda": mon,
-                            "estimado": promedio_mensual,
-                            "pagado": ya_pagado,
-                            "estado": "Pagado" if pendiente == 0 else "Pendiente"
-                        })
-        
-        # Ordenar: primero los pendientes, y por monto estimado de mayor a menor
-        detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, -x['estimado']))
-        
+
+        for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
+            nombre_lower = fijo_nombre.lower().strip()
+            monto_pagado_uyu = 0.0
+            monto_pagado_usd = 0.0
+            fue_pagado = False
+            
+            # Buscar si existe alguna transacción de este gasto en el mes seleccionado
+            for r in registros:
+                tipo_r = str(r.get('Tipo', '')).strip().capitalize()
+                concepto_r = str(r.get('Concepto', '')).lower().strip()
+                monto_r = float(r.get('Monto', 0) or 0)
+                moneda_r = str(r.get('Moneda', 'UYU')).strip().upper()
+                mes_r = str(r.get('Mes', '')).strip().upper()
+
+                es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
+
+                if tipo_r == 'Pasivo' and es_mes_valido:
+                    if nombre_lower in concepto_r or concepto_r in nombre_lower:
+                        fue_pagado = True
+                        if moneda_r == 'USD':
+                            monto_pagado_usd += monto_r
+                        else:
+                            monto_pagado_uyu += monto_r
+
+            es_usd = "DOLARES" in fijo_nombre
+            moneda_fijo = "USD" if es_usd else "UYU"
+            monto_final = monto_pagado_usd if es_usd else monto_pagado_uyu
+
+            detalles_fijos.append({
+                "concepto": fijo_nombre,
+                "moneda": moneda_fijo,
+                "monto_pagado": monto_final,
+                "estado": "Pagado" if fue_pagado else "Pendiente"
+            })
+
+        # Ordenar: Primero los Pendientes de pago, luego los Pagados
+        detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
+
         return jsonify({
             "status": "success",
             "mes_actual": mes_solicitado,

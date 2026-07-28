@@ -691,63 +691,52 @@ button:hover {
 }
 
 /* ==========================================
-   WHEEL PICKER (RUEDA INVISIBLE TACTIL)
+   SELECTOR DE MONEDA (SEGMENTED TOGGLE)
    ========================================== */
-.wheel-group {
-    background: var(--surface);
-    border: 1px solid var(--border);
+.currency-toggle {
+    display: flex;
+    background: var(--badge-bg);
     border-radius: 12px;
-    padding: 12px 0 0 0;
-    margin-bottom: 20px;
-    overflow: hidden;
-}
-.wheel-label {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--subtext);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    display: block;
-}
-.wheel-picker-wrapper {
+    padding: 4px;
     position: relative;
-    height: 105px; /* Altura exacta para 3 ítems */
+    margin-bottom: 20px;
 }
-.wheel-picker-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    /* Gradiente blanco arriba y abajo para efecto cilíndrico */
-    background: linear-gradient(to bottom, var(--surface) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, var(--surface) 100%);
-    pointer-events: none;
-    z-index: 2;
+
+.currency-toggle input[type="radio"] {
+    display: none;
 }
-.wheel-picker {
-    height: 100%;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE */
-}
-.wheel-picker::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
-.wheel-item, .wheel-space {
-    height: 35px;
-    line-height: 35px;
+
+.currency-toggle label {
+    flex: 1;
     text-align: center;
+    padding: 14px 0;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--subtext);
-    scroll-snap-align: center;
-    transition: all 0.15s ease;
-    cursor: grab;
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
 }
-.wheel-item:active { cursor: grabbing; }
-.wheel-item.active {
+
+.currency-toggle input[type="radio"]:checked + label {
     color: var(--text);
-    font-weight: 700;
-    font-size: 17px;
-    transform: scale(1.05);
+}
+
+.toggle-slider {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 1;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider {
+    transform: translateX(100%);
 }
 
 /* ==========================================
@@ -772,15 +761,38 @@ button:hover {
     font-weight: 600;
     font-size: 15px;
 }
+
 .badge-fijo {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     padding: 3px 8px;
     border-radius: 6px;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
-.badge-pendiente { background: var(--badge-bg); color: var(--subtext); }
-.badge-pagado { background: #171717; color: white; }
+
+.badge-pendiente::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    background-color: #DC2626;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.badge-pendiente {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FEE2E2;
+}
+
+.badge-pagado {
+    background: #171717;
+    color: #FFFFFF;
+}
 
 .fijo-monto {
     font-size: 13px;
