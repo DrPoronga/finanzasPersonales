@@ -4,15 +4,28 @@ from functools import wraps
 import calendar
 import os
 import json
+import time
 import traceback
 import gspread
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get('SECRET_KEY', 'finanzas_secret_key_2026_super_segura')
+# ==========================================
+# 1. MEJORA DE SEGURIDAD (SECRET_KEY Y PIN)
+# ==========================================
+secret_key = os.environ.get('SECRET_KEY')
+if not secret_key:
+    print("⚠️ ADVERTENCIA: 'SECRET_KEY' no configurada en variables de entorno. Generando clave aleatoria por sesión.")
+    secret_key = os.urandom(24).hex()
+app.secret_key = secret_key
+
 app.permanent_session_lifetime = timedelta(days=31)
 
-PIN_CORRECTO = str(os.environ.get('APP_PIN', '4372736')).strip()
+pin_env = os.environ.get('APP_PIN')
+if not pin_env:
+    print("⚠️ ADVERTENCIA: 'APP_PIN' no configurado en entorno. Se usará PIN por defecto para entorno local.")
+    pin_env = '4372736'
+PIN_CORRECTO = str(pin_env).strip()
 
 MESES = {
     1: "ENERO", 2: "FEBRERO", 3: "MARZO", 4: "ABRIL",
@@ -20,11 +33,48 @@ MESES = {
     9: "SEPTIEMBRE", 10: "OCTUBRE", 11: "NOVIEMBRE", 12: "DICIEMBRE"
 }
 
+# ==========================================
+# 2. CACHÉ EN MEMORIA PARA LECTURAS (RENDIMIENTO)
+# ==========================================
 SESSIONS_CACHE = {
     "client": None,
     "doc": None
 }
 
+DATA_CACHE = {
+    "transacciones": None,
+    "categorias": None,
+    "timestamp": 0
+}
+CACHE_TTL = 300  # Tiempo de vida de la caché: 5 minutos (en segundos)
+
+def invalidar_cache():
+    """Limpia la caché local para forzar una relectura en el próximo GET."""
+    DATA_CACHE["transacciones"] = None
+    DATA_CACHE["categorias"] = None
+    DATA_CACHE["timestamp"] = 0
+
+# ==========================================
+# 3. DECORADOR DE REINTENTOS PARA GSPREAD
+# ==========================================
+def con_reintentos(max_intentos=3, delay=1):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            ultimo_error = None
+            for intento in range(1, max_intentos + 1):
+                try:
+                    return f(*args, **kwargs)
+                except Exception as e:
+                    ultimo_error = e
+                    print(f"⚠️ Error en gspread (Intento {intento}/{max_intentos}): {e}")
+                    SESSIONS_CACHE["doc"] = None  # Resetea la conexión en caso de falla
+                    time.sleep(delay)
+            raise ultimo_error
+        return wrapper
+    return decorator
+
+@con_reintentos(max_intentos=3, delay=1)
 def conectar_google_sheets():
     if SESSIONS_CACHE["doc"]:
         return SESSIONS_CACHE["doc"]
@@ -43,6 +93,26 @@ def conectar_google_sheets():
     SESSIONS_CACHE["client"] = cliente
     SESSIONS_CACHE["doc"] = doc
     return doc
+
+@con_reintentos(max_intentos=3, delay=1)
+def obtener_registros_cached():
+    """Obtiene los registros utilizando caché en memoria cuando sea posible."""
+    ahora_ts = time.time()
+    
+    if (DATA_CACHE["transacciones"] is not None and 
+        DATA_CACHE["categorias"] is not None and 
+        (ahora_ts - DATA_CACHE["timestamp"]) < CACHE_TTL):
+        return DATA_CACHE["transacciones"], DATA_CACHE["categorias"]
+
+    doc = conectar_google_sheets()
+    transacciones = doc.worksheet("Transacciones").get_all_records()
+    categorias = doc.worksheet("Categorias").get_all_records()
+
+    DATA_CACHE["transacciones"] = transacciones
+    DATA_CACHE["categorias"] = categorias
+    DATA_CACHE["timestamp"] = ahora_ts
+
+    return transacciones, categorias
 
 def requiere_pin(f):
     @wraps(f)
@@ -72,7 +142,7 @@ def home():
 
 @app.route('/verificar_pin', methods=['POST'])
 def verificar_pin():
-    datos = request.get_json()
+    datos = request.get_json() or {}
     pin_ingresado = str(datos.get('pin', '')).strip()
 
     if pin_ingresado == PIN_CORRECTO:
@@ -95,13 +165,34 @@ def check_auth():
 @app.route('/registrar_gasto', methods=['POST'])
 @requiere_pin
 def registrar_gasto():
-    datos = request.get_json()
-    concepto = datos.get('concepto', '').strip()
-    monto = float(datos.get('monto', 0))
-    moneda = datos.get('moneda', 'USD').upper().strip()
-    tipo_ingresado = datos.get('tipo', 'Pasivo')  # 'Activo' o 'Pasivo'
+    datos = request.get_json() or {}
+
+    # ==========================================
+    # 4. VALIDACIÓN DE ENTRADAS DEL USUARIO
+    # ==========================================
+    concepto = str(datos.get('concepto', '')).strip()
+    if not concepto:
+        return jsonify({"status": "error", "message": "El concepto es obligatorio."}), 400
+
+    try:
+        monto = float(datos.get('monto', 0))
+        if monto <= 0:
+            return jsonify({"status": "error", "message": "El monto debe ser un número positivo mayor a 0."}), 400
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "Formato de monto inválido."}), 400
+
+    moneda = str(datos.get('moneda', 'USD')).upper().strip()
+    if moneda not in ['USD', 'UYU']:
+        return jsonify({"status": "error", "message": "Moneda no soportada. Solo USD o UYU."}), 400
+
+    tipo_ingresado = str(datos.get('tipo', 'Pasivo')).strip().capitalize()
+    if tipo_ingresado not in ['Activo', 'Pasivo']:
+        return jsonify({"status": "error", "message": "Tipo de movimiento no válido."}), 400
+
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
+    if nueva_categoria:
+        nueva_categoria = str(nueva_categoria).strip()
 
     ahora = datetime.now()
     fecha_hoy = ahora.strftime("%d/%m/%Y")
@@ -113,14 +204,13 @@ def registrar_gasto():
         hoja_transacciones = doc.worksheet("Transacciones")
         hoja_categorias = doc.worksheet("Categorias")
 
-        # El tipo siempre es prioritario y respeta la vista activa del formulario
         tipo = tipo_ingresado
 
         if nueva_categoria:
             categoria = nueva_categoria
             hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
-            registros_cat = hoja_categorias.get_all_records()
+            _, registros_cat = obtener_registros_cached()
             categoria = detectar_categoria(registros_cat, concepto)
 
             if not categoria:
@@ -134,6 +224,9 @@ def registrar_gasto():
 
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible])
 
+        # Se invalida la caché local para forzar actualización inmediata en el próximo GET de métricas
+        invalidar_cache()
+
         return jsonify({
             "status": "success",
             "message": "Movimiento registrado correctamente",
@@ -144,15 +237,15 @@ def registrar_gasto():
     except Exception as e:
         traceback.print_exc()
         SESSIONS_CACHE["doc"] = None
+        invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
 def obtener_metricas():
     try:
-        doc = conectar_google_sheets()
-        hoja_transacciones = doc.worksheet("Transacciones")
-        registros = hoja_transacciones.get_all_records()
+        # Obtención de datos usando la caché con resiliencia
+        registros, _ = obtener_registros_cached()
 
         ahora = datetime.now()
         mes_actual_nombre = MESES[ahora.month]
@@ -170,7 +263,6 @@ def obtener_metricas():
         meses_encontrados = set()
 
         # Estructuras para el Pronóstico de Gastos Fijos (No Prescindibles)
-        # { 'USD': { 'Alimentacion': { 'MES1': 100, 'MES2': 120 } } }
         historial_fijos = {'USD': {}, 'UYU': {}}
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
 
@@ -233,7 +325,6 @@ def obtener_metricas():
         for mon in ['USD', 'UYU']:
             pendientes_totales = 0.0
             for cat, meses_data in historial_fijos[mon].items():
-                # Consideramos gasto fijo si ha aparecido en al menos 2 meses o en el mes actual
                 cant_meses = len(meses_data)
                 if cant_meses >= 1:
                     promedio_mensual = sum(meses_data.values()) / cant_meses
@@ -250,7 +341,6 @@ def obtener_metricas():
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
-            # Restamos los compromisos fijos pendientes antes de dividir entre los días
             balance_disponible_usd = max(0.0, balance_real_usd - compromisos_pendientes_usd)
             balance_disponible_uyu = max(0.0, balance_real_uyu - compromisos_pendientes_uyu)
 
@@ -308,7 +398,8 @@ def obtener_metricas():
     except Exception as e:
         traceback.print_exc()
         SESSIONS_CACHE["doc"] = None
+        invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+
 if __name__ == '__main__':
     app.run(debug=True)
