@@ -32,8 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Métricas
     const selectMesFiltro = document.getElementById('selectMesFiltro');
+    const cardPrescindible = document.getElementById('cardPrescindible');
+    const cardIngresos = document.getElementById('cardIngresos');
+    const cardGastos = document.getElementById('cardGastos');
 
-    // Modal
+    // Modal Clasificar
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
     const selectCategoria = document.getElementById('selectCategoria');
@@ -42,9 +45,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnGuardarCategoria = document.getElementById('btnGuardarCategoria');
     const btnCancelarModal = document.getElementById('btnCancelarModal');
 
+    // Modal Ver Detalles
+    const modalDetalle = document.getElementById('modalDetalle');
+    const tituloModalDetalle = document.getElementById('tituloModalDetalle');
+    const resumenModalDetalle = document.getElementById('resumenModalDetalle');
+    const listaModalDetalle = document.getElementById('listaModalDetalle');
+    const btnCerrarModalDetalle = document.getElementById('btnCerrarModalDetalle');
+
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
+    let detallesTransaccionesCache = [];
 
     checkAutenticacion();
 
@@ -160,34 +171,35 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             if (data.status === 'success') {
                 necesitaRecargarMetricas = false;
+                detallesTransaccionesCache = data.detalles || [];
 
-                // Disponible Hoy
-                document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
+                // Disponible Hoy (UYU primero)
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
+                document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
 
-                // Banco
-                document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
+                // Banco (UYU primero)
                 document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
+                document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
 
-                // Prescindible
-                document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
+                // Prescindible (UYU primero)
                 document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
+                document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
-                // Ingresos
-                document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
+                // Ingresos (UYU primero)
                 document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
+                document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
 
-                // Gastos
-                document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
+                // Gastos (UYU primero)
                 document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
+                document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
 
-                // Promedio Diario
-                document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
+                // Promedio Diario (UYU primero)
                 document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
+                document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
-                // Tasa Ahorro
-                document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
+                // Tasa Ahorro (UYU primero)
                 document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
+                document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
                 // Top Categoria
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
@@ -208,7 +220,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Desglose
+                // Desglose por categoría (UYU primero)
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -216,21 +228,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     data.desglose.forEach(item => {
                         const divItem = document.createElement('div');
                         divItem.className = 'desglose-item';
+                        divItem.setAttribute('data-categoria', item.categoria);
                         
                         let valoresHtml = '';
-                        if (item.monto_usd) {
-                            valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
-                        }
                         if (item.monto_uyu) {
                             valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
                         }
+                        if (item.monto_usd) {
+                            valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+                        }
 
                         divItem.innerHTML = `
-                            <span class="desglose-nombre">${item.categoria}</span>
+                            <span class="desglose-nombre">${item.categoria} <span class="icon-arrow">➔</span></span>
                             <div class="desglose-valores">
                                 ${valoresHtml}
                             </div>
                         `;
+
+                        divItem.addEventListener('click', () => {
+                            abrirModalDetalles('categoria', item.categoria);
+                        });
+
                         listaContainer.appendChild(divItem);
                     });
                 } else {
@@ -241,6 +259,102 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error cargando métricas", error);
         }
     }
+
+    // TARJETAS INTERACTIVAS
+    cardPrescindible.addEventListener('click', () => {
+        abrirModalDetalles('prescindibles');
+    });
+
+    cardIngresos.addEventListener('click', () => {
+        abrirModalDetalles('ingresos');
+    });
+
+    cardGastos.addEventListener('click', () => {
+        abrirModalDetalles('gastos');
+    });
+
+    // MOSTRAR MODAL DE DETALLES (UYU PRIMERO EN EL RESUMEN)
+    function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
+        let listaFiltrada = [];
+        let titulo = '';
+
+        if (filtroTipo === 'prescindibles') {
+            titulo = 'Gastos Prescindibles';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true);
+        } else if (filtroTipo === 'ingresos') {
+            titulo = 'Detalle de Ingresos';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Activo');
+        } else if (filtroTipo === 'gastos') {
+            titulo = 'Detalle de Gastos';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo');
+        } else if (filtroTipo === 'categoria') {
+            titulo = `Gastos en ${categoriaNombre}`;
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.categoria === categoriaNombre);
+        }
+
+        tituloModalDetalle.textContent = titulo;
+
+        // Sumas acumuladas (UYU primero)
+        let sumUSD = 0;
+        let sumUYU = 0;
+        listaFiltrada.forEach(item => {
+            if (item.moneda === 'USD') sumUSD += item.monto;
+            else sumUYU += item.monto;
+        });
+
+        let resumenHtml = '';
+        if (sumUYU > 0) resumenHtml += `<div>UYU: <span>$${sumUYU.toLocaleString('es-UY', {maximumFractionDigits: 0})}</span></div>`;
+        if (sumUSD > 0) resumenHtml += `<div>USD: <span>US$${sumUSD.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`;
+        if (sumUSD === 0 && sumUYU === 0) resumenHtml = '<div>Sin movimientos registrados</div>';
+
+        resumenModalDetalle.innerHTML = resumenHtml;
+
+        listaModalDetalle.innerHTML = '';
+        if (listaFiltrada.length === 0) {
+            listaModalDetalle.innerHTML = '<div style="color: var(--subtext); text-align: center; padding: 20px;">No hay registros para este filtro.</div>';
+        } else {
+            listaFiltrada.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'detalle-item';
+
+                const esActivo = item.tipo === 'Activo';
+                const signo = esActivo ? '+' : '-';
+                const formatoMonto = item.moneda === 'USD' 
+                    ? `${signo}US$${item.monto.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                    : `${signo}$${item.monto.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+
+                const badgePrescindible = item.prescindible ? '<span class="badge-prescindible">Prescindible</span>' : '';
+                const fechaTexto = `${item.fecha} ${item.hora}`;
+
+                itemDiv.innerHTML = `
+                    <div class="detalle-info">
+                        <span class="detalle-concepto">${item.concepto}</span>
+                        <div class="detalle-sub">
+                            <span>${fechaTexto}</span> • 
+                            <span>${item.categoria}</span>
+                            ${badgePrescindible}
+                        </div>
+                    </div>
+                    <div class="detalle-monto ${esActivo ? 'monto-activo' : 'monto-pasivo'}">
+                        ${formatoMonto}
+                    </div>
+                `;
+                listaModalDetalle.appendChild(itemDiv);
+            });
+        }
+
+        modalDetalle.classList.remove('hidden');
+    }
+
+    btnCerrarModalDetalle.addEventListener('click', () => {
+        modalDetalle.classList.add('hidden');
+    });
+
+    modalDetalle.addEventListener('click', (e) => {
+        if (e.target === modalDetalle) {
+            modalDetalle.classList.add('hidden');
+        }
+    });
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -286,7 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
             mostrarMensaje('Error de conexión', 'error');
         } finally {
             if (!gastoPendiente) {
-                btnSubmit.textContent = textoOriginal;
+                btnSubmit.textContent = tipoActual === "Activo" ? "Registrar Ingreso" : "Registrar Gasto";
                 btnSubmit.disabled = false;
             }
         }

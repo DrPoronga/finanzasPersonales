@@ -57,8 +57,8 @@
 
                     <div class="form-group">
                         <select id="selectMoneda">
-                            <option value="USD">Dólares (US$ USD)</option>
                             <option value="UYU">Pesos Uruguayos ($ UYU)</option>
+                            <option value="USD">Dólares (US$ USD)</option>
                         </select>
                     </div>
 
@@ -81,65 +81,74 @@
                     <select id="selectMesFiltro"></select>
                 </div>
 
-                <!-- DESTACADO: DISPONIBLE HOY -->
+                <!-- DESTACADO: DISPONIBLE HOY (UYU PRIMERO) -->
                 <div class="card disponible-card">
                     <h3>Disponible para hoy</h3>
                     <div class="monto-group">
                         <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblDisponibleHoyUSD" class="monto-num">US$0</span>
-                        </div>
-                        <div class="monto-row">
                             <span class="badge">UYU</span>
                             <span id="lblDisponibleHoyUYU" class="monto-num">$0</span>
+                        </div>
+                        <div class="monto-row">
+                            <span class="badge">USD</span>
+                            <span id="lblDisponibleHoyUSD" class="monto-num">US$0</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- BANCO -->
+                <!-- BANCO (UYU PRIMERO) -->
                 <div class="card balance-card">
                     <h3>Dinero en el banco</h3>
                     <div class="monto-group">
                         <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblBalanceUSD" class="monto-num">US$0</span>
-                        </div>
-                        <div class="monto-row">
                             <span class="badge">UYU</span>
                             <span id="lblBalanceUYU" class="monto-num">$0</span>
+                        </div>
+                        <div class="monto-row">
+                            <span class="badge">USD</span>
+                            <span id="lblBalanceUSD" class="monto-num">US$0</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- PRESCINDIBLE -->
-                <div class="card prescindible-card">
-                    <h3>Gastos que podría haber ahorrado</h3>
+                <!-- PRESCINDIBLE (CLICKABLE / UYU PRIMERO) -->
+                <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
+                    <div class="card-header-action">
+                        <h3>Gastos que podría haber ahorrado</h3>
+                        <span class="icon-arrow">➔</span>
+                    </div>
                     <div class="monto-group">
-                        <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
-                        </div>
                         <div class="monto-row">
                             <span class="badge">UYU</span>
                             <span id="lblPrescindibleUYU" class="monto-num">$0</span>
                         </div>
+                        <div class="monto-row">
+                            <span class="badge">USD</span>
+                            <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- MÉTRICAS BIMONEDA (UNIFICADAS) -->
+                <!-- MÉTRICAS BIMONEDA (CLICKABLE / UYU PRIMERO) -->
                 <div class="metricas-grid">
-                    <div class="card">
-                        <h4>Ingresos</h4>
+                    <div class="card card-interactive" id="cardIngresos" title="Toca para ver el detalle de ingresos">
+                        <div class="card-header-action">
+                            <h4>Ingresos</h4>
+                            <span class="icon-arrow">➔</span>
+                        </div>
                         <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblIngresosUSD" class="val">US$0</span></div>
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblIngresosUYU" class="val">$0</span></div>
+                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblIngresosUSD" class="val">US$0</span></div>
                         </div>
                     </div>
-                    <div class="card">
-                        <h4>Gastos</h4>
+                    <div class="card card-interactive" id="cardGastos" title="Toca para ver el detalle de gastos">
+                        <div class="card-header-action">
+                            <h4>Gastos</h4>
+                            <span class="icon-arrow">➔</span>
+                        </div>
                         <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastosUSD" class="val">US$0</span></div>
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastosUYU" class="val">$0</span></div>
+                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastosUSD" class="val">US$0</span></div>
                         </div>
                     </div>
                 </div>
@@ -148,15 +157,15 @@
                     <div class="card">
                         <h4>Promedio Diario</h4>
                         <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastoDiarioUSD" class="val">US$0</span></div>
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastoDiarioUYU" class="val">$0</span></div>
+                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastoDiarioUSD" class="val">US$0</span></div>
                         </div>
                     </div>
                     <div class="card">
                         <h4>Tasa de Ahorro</h4>
                         <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblTasaAhorroUSD" class="val">0%</span></div>
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblTasaAhorroUYU" class="val">0%</span></div>
+                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblTasaAhorroUSD" class="val">0%</span></div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +178,7 @@
 
                 <!-- DESGLOSE POR CATEGORÍA -->
                 <div class="card desglose-card">
-                    <h4>Gastos por Categoría</h4>
+                    <h4>Gastos por Categoría <span class="sub-hint">(Toca una para ver detalle)</span></h4>
                     <div id="listaDesglose"></div>
                 </div>
             </section>
@@ -191,6 +200,18 @@
 
                 <button id="btnGuardarCategoria" class="btn-primary" style="margin-top: 15px;">Guardar</button>
                 <button id="btnCancelarModal" class="btn-secondary">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL VER DETALLES -->
+        <div id="modalDetalle" class="modal hidden">
+            <div class="modal-content modal-content-large">
+                <div class="modal-header">
+                    <h2 id="tituloModalDetalle">Detalle de Transacciones</h2>
+                    <button id="btnCerrarModalDetalle" class="close-btn">&times;</button>
+                </div>
+                <div id="resumenModalDetalle" class="modal-resumen"></div>
+                <div id="listaModalDetalle" class="modal-lista"></div>
             </div>
         </div>
 

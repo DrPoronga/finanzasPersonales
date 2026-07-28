@@ -11,11 +11,10 @@ import gspread
 app = Flask(__name__)
 
 # ==========================================
-# 1. MEJORA DE SEGURIDAD (SECRET_KEY Y PIN)
+# 1. SEGURIDAD (SECRET_KEY Y PIN)
 # ==========================================
 secret_key = os.environ.get('SECRET_KEY')
 if not secret_key:
-    print("⚠️ ADVERTENCIA: 'SECRET_KEY' no configurada en variables de entorno. Generando clave aleatoria por sesión.")
     secret_key = os.urandom(24).hex()
 app.secret_key = secret_key
 
@@ -23,7 +22,6 @@ app.permanent_session_lifetime = timedelta(days=31)
 
 pin_env = os.environ.get('APP_PIN')
 if not pin_env:
-    print("⚠️ ADVERTENCIA: 'APP_PIN' no configurado en entorno. Se usará PIN por defecto para entorno local.")
     pin_env = '4372736'
 PIN_CORRECTO = str(pin_env).strip()
 
@@ -34,7 +32,7 @@ MESES = {
 }
 
 # ==========================================
-# 2. CACHÉ EN MEMORIA PARA LECTURAS (RENDIMIENTO)
+# 2. CACHÉ EN MEMORIA (RENDIMIENTO)
 # ==========================================
 SESSIONS_CACHE = {
     "client": None,
@@ -46,16 +44,15 @@ DATA_CACHE = {
     "categorias": None,
     "timestamp": 0
 }
-CACHE_TTL = 300  # Tiempo de vida de la caché: 5 minutos (en segundos)
+CACHE_TTL = 300  # TTL de 5 minutos
 
 def invalidar_cache():
-    """Limpia la caché local para forzar una relectura en el próximo GET."""
     DATA_CACHE["transacciones"] = None
     DATA_CACHE["categorias"] = None
     DATA_CACHE["timestamp"] = 0
 
 # ==========================================
-# 3. DECORADOR DE REINTENTOS PARA GSPREAD
+# 3. REINTENTOS PARA GSPREAD (RESILIENCIA)
 # ==========================================
 def con_reintentos(max_intentos=3, delay=1):
     def decorator(f):
@@ -68,7 +65,7 @@ def con_reintentos(max_intentos=3, delay=1):
                 except Exception as e:
                     ultimo_error = e
                     print(f"⚠️ Error en gspread (Intento {intento}/{max_intentos}): {e}")
-                    SESSIONS_CACHE["doc"] = None  # Resetea la conexión en caso de falla
+                    SESSIONS_CACHE["doc"] = None
                     time.sleep(delay)
             raise ultimo_error
         return wrapper
@@ -96,7 +93,6 @@ def conectar_google_sheets():
 
 @con_reintentos(max_intentos=3, delay=1)
 def obtener_registros_cached():
-    """Obtiene los registros utilizando caché en memoria cuando sea posible."""
     ahora_ts = time.time()
     
     if (DATA_CACHE["transacciones"] is not None and 
@@ -167,9 +163,6 @@ def check_auth():
 def registrar_gasto():
     datos = request.get_json() or {}
 
-    # ==========================================
-    # 4. VALIDACIÓN DE ENTRADAS DEL USUARIO
-    # ==========================================
     concepto = str(datos.get('concepto', '')).strip()
     if not concepto:
         return jsonify({"status": "error", "message": "El concepto es obligatorio."}), 400
@@ -177,17 +170,17 @@ def registrar_gasto():
     try:
         monto = float(datos.get('monto', 0))
         if monto <= 0:
-            return jsonify({"status": "error", "message": "El monto debe ser un número positivo mayor a 0."}), 400
+            return jsonify({"status": "error", "message": "El monto debe ser positivo y mayor a 0."}), 400
     except (ValueError, TypeError):
-        return jsonify({"status": "error", "message": "Formato de monto inválido."}), 400
+        return jsonify({"status": "error", "message": "Monto inválido."}), 400
 
-    moneda = str(datos.get('moneda', 'USD')).upper().strip()
+    moneda = str(datos.get('moneda', 'UYU')).upper().strip()
     if moneda not in ['USD', 'UYU']:
-        return jsonify({"status": "error", "message": "Moneda no soportada. Solo USD o UYU."}), 400
+        return jsonify({"status": "error", "message": "Moneda no soportada."}), 400
 
     tipo_ingresado = str(datos.get('tipo', 'Pasivo')).strip().capitalize()
     if tipo_ingresado not in ['Activo', 'Pasivo']:
-        return jsonify({"status": "error", "message": "Tipo de movimiento no válido."}), 400
+        return jsonify({"status": "error", "message": "Tipo no válido."}), 400
 
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
@@ -224,7 +217,6 @@ def registrar_gasto():
 
         hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible])
 
-        # Se invalida la caché local para forzar actualización inmediata en el próximo GET de métricas
         invalidar_cache()
 
         return jsonify({
@@ -244,7 +236,6 @@ def registrar_gasto():
 @requiere_pin
 def obtener_metricas():
     try:
-        # Obtención de datos usando la caché con resiliencia
         registros, _ = obtener_registros_cached()
 
         ahora = datetime.now()
@@ -262,9 +253,10 @@ def obtener_metricas():
         gastos_por_categoria = {}
         meses_encontrados = set()
 
-        # Estructuras para el Pronóstico de Gastos Fijos (No Prescindibles)
         historial_fijos = {'USD': {}, 'UYU': {}}
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
+
+        detalles_filtrados = []
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
@@ -279,7 +271,7 @@ def obtener_metricas():
 
             es_no_prescindible = presc in ['No', 'False', '']
 
-            # 1. Banco (Histórico Acumulado)
+            # Banco
             if moneda == 'USD':
                 if tipo == 'Activo': ingresos_acum_usd += monto
                 else: gastos_acum_usd += monto
@@ -287,7 +279,7 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_acum_uyu += monto
                 else: gastos_acum_uyu += monto
 
-            # 2. Mapeo para el Pronóstico (Solo Pasivos NO prescindibles)
+            # Pronóstico
             if tipo == 'Pasivo' and es_no_prescindible and mes_registro:
                 if cat not in historial_fijos[moneda]:
                     historial_fijos[moneda][cat] = {}
@@ -296,7 +288,7 @@ def obtener_metricas():
                 if mes_registro == mes_actual_nombre:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
 
-            # 3. Filtro por mes solicitado para métricas de pantalla
+            # Filtro mes
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
                 if tipo == 'Activo':
@@ -315,10 +307,20 @@ def obtener_metricas():
                         gastos_por_categoria[cat]['UYU'] += monto
                         if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
 
+                detalles_filtrados.append({
+                    "fecha": str(r.get('Fecha', '')).strip(),
+                    "hora": str(r.get('Hora', '')).strip(),
+                    "concepto": str(r.get('Concepto', '')).strip(),
+                    "monto": monto,
+                    "moneda": moneda,
+                    "categoria": cat,
+                    "tipo": tipo,
+                    "prescindible": presc in ['Sí', 'Si', 'True']
+                })
+
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
 
-        # CÁLCULO DEL PRONÓSTICO DE COMPROMISOS PENDIENTES
         compromisos_pendientes_usd = 0.0
         compromisos_pendientes_uyu = 0.0
 
@@ -335,7 +337,6 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
-        # CÁLCULO DEL DISPONIBLE PARA HOY CON PRONÓSTICO
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
@@ -347,16 +348,13 @@ def obtener_metricas():
             disponible_hoy_usd = balance_disponible_usd / dias_restantes
             disponible_hoy_uyu = balance_disponible_uyu / dias_restantes
 
-        # Promedio diario del mes
         divisor_dias = max(1, ahora.day) if mes_solicitado == mes_actual_nombre else 30
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
 
-        # Tasa de Ahorro
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Mayor categoría
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
@@ -366,8 +364,8 @@ def obtener_metricas():
             if montos['USD'] > 0 or montos['UYU'] > 0:
                 desglose.append({
                     "categoria": cat,
-                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else None,
-                    "monto_uyu": f"${montos['UYU']:,.0f} UYU" if montos['UYU'] > 0 else None
+                    "monto_uyu": f"${montos['UYU']:,.0f} UYU" if montos['UYU'] > 0 else None,
+                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else None
                 })
 
         lista_meses = list(MESES.values())
@@ -377,22 +375,23 @@ def obtener_metricas():
             "status": "success",
             "mes_actual": mes_solicitado,
             "meses_disponibles": meses_ordenados,
-            "disponible_hoy_usd": f"US${disponible_hoy_usd:,.2f}" if mes_solicitado == mes_actual_nombre else "-",
             "disponible_hoy_uyu": f"${disponible_hoy_uyu:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
-            "balance_usd": f"US${balance_real_usd:,.2f}",
+            "disponible_hoy_usd": f"US${disponible_hoy_usd:,.2f}" if mes_solicitado == mes_actual_nombre else "-",
             "balance_uyu": f"${balance_real_uyu:,.0f}",
-            "ingresos_usd": f"US${ingresos_filtrado_usd:,.2f}",
+            "balance_usd": f"US${balance_real_usd:,.2f}",
             "ingresos_uyu": f"${ingresos_filtrado_uyu:,.0f}",
-            "gastos_usd": f"US${gastos_filtrado_usd:,.2f}",
+            "ingresos_usd": f"US${ingresos_filtrado_usd:,.2f}",
             "gastos_uyu": f"${gastos_filtrado_uyu:,.0f}",
-            "prescindible_usd": f"US${prescindible_filtrado_usd:,.2f}",
+            "gastos_usd": f"US${gastos_filtrado_usd:,.2f}",
             "prescindible_uyu": f"${prescindible_filtrado_uyu:,.0f}",
-            "gasto_diario_usd": f"US${gasto_diario_usd:,.2f}",
+            "prescindible_usd": f"US${prescindible_filtrado_usd:,.2f}",
             "gasto_diario_uyu": f"${gasto_diario_uyu:,.0f}",
-            "tasa_ahorro_usd": f"{tasa_ahorro_usd:.1f}%",
+            "gasto_diario_usd": f"US${gasto_diario_usd:,.2f}",
             "tasa_ahorro_uyu": f"{tasa_ahorro_uyu:.1f}%",
+            "tasa_ahorro_usd": f"{tasa_ahorro_usd:.1f}%",
             "top_categoria": top_cat,
-            "desglose": desglose
+            "desglose": desglose,
+            "detalles": detalles_filtrados
         })
 
     except Exception as e:
