@@ -406,6 +406,28 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
+# === CÁLCULO DE DETALLES DE GASTOS FIJOS PARA LA INTERFAZ ===
+        detalles_fijos = []
+        for mon in ['UYU', 'USD']:
+            for cat, meses_data in historial_fijos[mon].items():
+                cant_meses = len(meses_data)
+                if cant_meses >= 1:
+                    promedio_mensual = sum(meses_data.values()) / cant_meses
+                    ya_pagado = pagado_fijos_mes_actual[mon].get(cat, 0.0)
+                    pendiente = max(0.0, promedio_mensual - ya_pagado)
+                    
+                    if promedio_mensual > 0:
+                        detalles_fijos.append({
+                            "categoria": cat,
+                            "moneda": mon,
+                            "estimado": promedio_mensual,
+                            "pagado": ya_pagado,
+                            "estado": "Pagado" if pendiente == 0 else "Pendiente"
+                        })
+        
+        # Ordenar: primero los pendientes, y por monto estimado de mayor a menor
+        detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, -x['estimado']))
+        
         return jsonify({
             "status": "success",
             "mes_actual": mes_solicitado,
@@ -428,7 +450,8 @@ def obtener_metricas():
             "comp_ingresos": comp_ingresos,
             "top_categoria": top_cat,
             "desglose": desglose,
-            "detalles": detalles_filtrados
+            "detalles": detalles_filtrados,
+            "fijos": detalles_fijos
         })
 
     except Exception as e:

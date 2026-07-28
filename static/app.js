@@ -57,6 +57,49 @@ document.addEventListener("DOMContentLoaded", () => {
     let detallesTransaccionesCache = [];
 
     checkAutenticacion();
+	
+	// LOGICA DE LA RUEDA INVISIBLE (WHEEL)
+    const wheel = document.getElementById('wheelMoneda');
+    const inputMoneda = document.getElementById('selectMoneda');
+    
+    if (wheel) {
+        const items = wheel.querySelectorAll('.wheel-item');
+        
+        const updateWheel = () => {
+            let centerPos = wheel.scrollTop + (wheel.clientHeight / 2);
+            let closest = null;
+            let minDiff = Infinity;
+            
+            // Buscar el elemento más cercano al centro al hacer scroll
+            items.forEach(item => {
+                let itemCenter = item.offsetTop + (item.clientHeight / 2);
+                let diff = Math.abs(centerPos - itemCenter);
+                if (diff < minDiff) {
+                    minDiff = diff;
+                    closest = item;
+                }
+            });
+            
+            if (closest) {
+                items.forEach(i => i.classList.remove('active'));
+                closest.classList.add('active');
+                inputMoneda.value = closest.getAttribute('data-value');
+            }
+        };
+
+        wheel.addEventListener('scroll', updateWheel);
+        
+        // Permitir hacer tap en la opción para que gire sola al centro
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                wheel.scrollTo({
+                    top: item.offsetTop - (wheel.clientHeight / 2) + (item.clientHeight / 2),
+                    behavior: 'smooth'
+                });
+            });
+        });
+        setTimeout(updateWheel, 50); // Setup inicial
+    }
 
     async function checkAutenticacion() {
         try {
@@ -169,6 +212,45 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
+				// === CONTROL DE GASTOS FIJOS ===
+                const listaFijos = document.getElementById('listaFijos');
+                if (listaFijos) {
+                    listaFijos.innerHTML = '';
+                    if (data.fijos && data.fijos.length > 0) {
+                        data.fijos.forEach(fijo => {
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'fijo-item';
+                            
+                            const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                            const pagadoFmt = `${monedaSym}${fijo.pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+                            const estimadoFmt = `${monedaSym}${fijo.estimado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+                            
+                            const esPagado = fijo.estado === 'Pagado';
+                            const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                            const icon = esPagado ? '✓' : '⏳';
+                            
+                            let porcentaje = fijo.estimado > 0 ? (fijo.pagado / fijo.estimado) * 100 : 0;
+                            if (porcentaje > 100) porcentaje = 100;
+                            
+                            itemDiv.innerHTML = `
+                                <div class="fijo-header">
+                                    <span class="fijo-nombre">${fijo.categoria}</span>
+                                    <span class="badge-fijo ${badgeClass}">${icon} ${fijo.estado}</span>
+                                </div>
+                                <div class="fijo-monto">
+                                    <span>Pagado: <strong>${pagadoFmt}</strong></span>
+                                    <span>Estimado: ${estimadoFmt}</span>
+                                </div>
+                                <div class="fijo-bar-bg">
+                                    <div class="fijo-bar-fill" style="width: ${porcentaje}%;"></div>
+                                </div>
+                            `;
+                            listaFijos.appendChild(itemDiv);
+                        });
+                    } else {
+                        listaFijos.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">No hay gastos fijos registrados. Agrega gastos desmarcando la opción "Prescindible".</div>';
+                    }
+                }
                 necesitaRecargarMetricas = false;
                 detallesTransaccionesCache = data.detalles || [];
 
