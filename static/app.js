@@ -184,25 +184,32 @@ document.addEventListener("DOMContentLoaded", () => {
                     listaFijos.innerHTML = '';
                     if (data.fijos && data.fijos.length > 0) {
                         data.fijos.forEach(fijo => {
-							const esPagado = fijo.estado === 'Pagado';
-							const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                            // 1. Crear el contenedor de cada fila
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'fijo-item';
 
-							const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
-							const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+                            const esPagado = fijo.estado === 'Pagado';
+                            const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
 
-							const textoMonto = esPagado 
-								? `<span>Pagado: <strong>${montoFmt}</strong></span>`
-								: `<span style="color: var(--subtext);">Pendiente de pago</span>`;
+                            const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                            const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
 
-							itemDiv.innerHTML = `
-								<div class="fijo-header">
-									<span class="fijo-nombre">${fijo.concepto}</span>
-									<span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
-								</div>
-								<div class="fijo-monto">
-									${textoMonto}
-								</div>
-							`;
+                            const textoMonto = esPagado 
+                                ? `<span>Pagado: <strong>${montoFmt}</strong></span>`
+                                : `<span style="color: var(--subtext);">Pendiente de pago</span>`;
+
+                            itemDiv.innerHTML = `
+                                <div class="fijo-header">
+                                    <span class="fijo-nombre">${fijo.concepto}</span>
+                                    <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
+                                </div>
+                                <div class="fijo-monto">
+                                    ${textoMonto}
+                                </div>
+                            `;
+
+                            // 2. Insertar la fila dentro de la lista
+                            listaFijos.appendChild(itemDiv);
                         });
                     }
                 }
