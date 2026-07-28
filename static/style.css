@@ -196,23 +196,44 @@ button:hover {
     letter-spacing: 0.6px;
 }
 
-/* EFECTO HOVER DISCRETO Y ELEGANTE PARA TARJETAS */
+/* ==========================================
+   TARJETAS INTERACTIVAS (ESTILO BOTÓN 3D)
+   ========================================== */
 .card-interactive {
     cursor: pointer;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #171717 !important;
+    /* Crea la base 3D minimalista en color negro sólido */
+    box-shadow: 0 3.5px 0 0 #171717 !important; 
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
     user-select: none;
+    position: relative;
+}
+
+/* Indicador sutil (flecha) en los títulos para delatar que es un botón */
+.card-interactive h3::after, 
+.card-interactive h4::after {
+    content: " ›";
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-left: 4px;
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.card-interactive:hover h3::after,
+.card-interactive:hover h4::after {
+    transform: translateX(3px);
 }
 
 .card-interactive:hover {
-    border-color: #171717;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+    background-color: #F4F4F5;
 }
 
+/* Efecto 3D de hundimiento al presionar/hacer clic */
 .card-interactive:active {
-    transform: translateY(0) scale(0.99);
+    transform: translateY(3.5px);
+    box-shadow: 0 0 0 0 #171717 !important;
 }
 
 .monto-group {
@@ -306,26 +327,50 @@ button:hover {
     margin-bottom: 15px;
 }
 
-/* HOVER DISCRETO PARA LAS FILAS DE CATEGORÍA */
+/* ==========================================
+   DESGLOSE POR CATEGORÍA (BOTONES INDIVIDUALES)
+   ========================================== */
 .desglose-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background-color: var(--surface);
     font-size: 15px;
     cursor: pointer;
-    border-radius: 8px;
-    transition: background-color 0.2s ease, transform 0.15s ease;
+    /* Relieve 3D fino */
+    box-shadow: 0 2.5px 0 0 var(--border);
+    transition: all 0.12s ease;
 }
 
 .desglose-item:hover {
-    background-color: var(--badge-bg);
-    transform: translateX(3px);
+    border-color: #171717;
+    box-shadow: 0 2.5px 0 0 #171717;
+    background-color: var(--bg);
 }
 
-.desglose-item:last-child {
-    border-bottom: none;
+/* Hundimiento táctil al tocar/cliquear */
+.desglose-item:active {
+    transform: translateY(2.5px);
+    box-shadow: 0 0 0 0 #171717;
+}
+
+/* Indicador gráfico sutil al final de la fila */
+.desglose-item::after {
+    content: "›";
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--subtext);
+    margin-left: 10px;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.desglose-item:hover::after {
+    color: var(--text);
+    transform: translateX(2px);
 }
 
 .desglose-nombre {
