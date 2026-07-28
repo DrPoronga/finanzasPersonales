@@ -81,7 +81,7 @@
                     <select id="selectMesFiltro"></select>
                 </div>
 
-                <!-- DESTACADO: DISPONIBLE HOY (UYU PRIMERO) -->
+                <!-- DESTACADO: DISPONIBLE HOY -->
                 <div class="card disponible-card">
                     <h3>Disponible para hoy</h3>
                     <div class="monto-group">
@@ -96,7 +96,7 @@
                     </div>
                 </div>
 
-                <!-- BANCO (UYU PRIMERO) -->
+                <!-- BANCO -->
                 <div class="card balance-card">
                     <h3>Dinero en el banco</h3>
                     <div class="monto-group">
@@ -111,11 +111,10 @@
                     </div>
                 </div>
 
-                <!-- PRESCINDIBLE (CLICKABLE / UYU PRIMERO) -->
+                <!-- PRESCINDIBLE (CLICKABLE) -->
                 <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
                     <div class="card-header-action">
                         <h3>Gastos que podría haber ahorrado</h3>
-                        <span class="icon-arrow">➔</span>
                     </div>
                     <div class="monto-group">
                         <div class="monto-row">
@@ -129,12 +128,11 @@
                     </div>
                 </div>
 
-                <!-- MÉTRICAS BIMONEDA (CLICKABLE / UYU PRIMERO) -->
+                <!-- MÉTRICAS BIMONEDA (CLICKABLE) -->
                 <div class="metricas-grid">
                     <div class="card card-interactive" id="cardIngresos" title="Toca para ver el detalle de ingresos">
                         <div class="card-header-action">
                             <h4>Ingresos</h4>
-                            <span class="icon-arrow">➔</span>
                         </div>
                         <div class="monto-group-compact">
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblIngresosUYU" class="val">$0</span></div>
@@ -144,7 +142,6 @@
                     <div class="card card-interactive" id="cardGastos" title="Toca para ver el detalle de gastos">
                         <div class="card-header-action">
                             <h4>Gastos</h4>
-                            <span class="icon-arrow">➔</span>
                         </div>
                         <div class="monto-group-compact">
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastosUYU" class="val">$0</span></div>
@@ -178,7 +175,7 @@
 
                 <!-- DESGLOSE POR CATEGORÍA -->
                 <div class="card desglose-card">
-                    <h4>Gastos por Categoría <span class="sub-hint">(Toca una para ver detalle)</span></h4>
+                    <h4>Gastos por Categoría</h4>
                     <div id="listaDesglose"></div>
                 </div>
             </section>
@@ -203,12 +200,11 @@
             </div>
         </div>
 
-        <!-- MODAL VER DETALLES -->
+        <!-- MODAL VER DETALLES (SIN "X") -->
         <div id="modalDetalle" class="modal hidden">
             <div class="modal-content modal-content-large">
                 <div class="modal-header">
                     <h2 id="tituloModalDetalle">Detalle de Transacciones</h2>
-                    <button id="btnCerrarModalDetalle" class="close-btn">&times;</button>
                 </div>
                 <div id="resumenModalDetalle" class="modal-resumen"></div>
                 <div id="listaModalDetalle" class="modal-lista"></div>

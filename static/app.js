@@ -50,7 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const tituloModalDetalle = document.getElementById('tituloModalDetalle');
     const resumenModalDetalle = document.getElementById('resumenModalDetalle');
     const listaModalDetalle = document.getElementById('listaModalDetalle');
-    const btnCerrarModalDetalle = document.getElementById('btnCerrarModalDetalle');
 
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
@@ -173,31 +172,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 necesitaRecargarMetricas = false;
                 detallesTransaccionesCache = data.detalles || [];
 
-                // Disponible Hoy (UYU primero)
+                // Disponible Hoy
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
                 document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
 
-                // Banco (UYU primero)
+                // Banco
                 document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
                 document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
 
-                // Prescindible (UYU primero)
+                // Prescindible
                 document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
                 document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
-                // Ingresos (UYU primero)
+                // Ingresos
                 document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
                 document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
 
-                // Gastos (UYU primero)
+                // Gastos
                 document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
                 document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
 
-                // Promedio Diario (UYU primero)
+                // Promedio Diario
                 document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
                 document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
-                // Tasa Ahorro (UYU primero)
+                // Tasa Ahorro
                 document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
                 document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
@@ -220,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Desglose por categoría (UYU primero)
+                // Desglose por categoría
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -239,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
 
                         divItem.innerHTML = `
-                            <span class="desglose-nombre">${item.categoria} <span class="icon-arrow">➔</span></span>
+                            <span class="desglose-nombre">${item.categoria}</span>
                             <div class="desglose-valores">
                                 ${valoresHtml}
                             </div>
@@ -273,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
         abrirModalDetalles('gastos');
     });
 
-    // MOSTRAR MODAL DE DETALLES (UYU PRIMERO EN EL RESUMEN)
+    // ABRIR Y MOSTRAR DETALLES
     function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
         let listaFiltrada = [];
         let titulo = '';
@@ -294,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         tituloModalDetalle.textContent = titulo;
 
-        // Sumas acumuladas (UYU primero)
+        // Sumas acumuladas
         let sumUSD = 0;
         let sumUYU = 0;
         listaFiltrada.forEach(item => {
@@ -346,10 +345,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modalDetalle.classList.remove('hidden');
     }
 
-    btnCerrarModalDetalle.addEventListener('click', () => {
-        modalDetalle.classList.add('hidden');
-    });
-
+    // CIERRE AL TOCAR FUERA DE LA VENTANA MODAL
     modalDetalle.addEventListener('click', (e) => {
         if (e.target === modalDetalle) {
             modalDetalle.classList.add('hidden');

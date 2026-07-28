@@ -196,33 +196,23 @@ button:hover {
     letter-spacing: 0.6px;
 }
 
+/* EFECTO HOVER DISCRETO Y ELEGANTE PARA TARJETAS */
 .card-interactive {
     cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
 }
 
-.card-interactive:hover, .card-interactive:active {
+.card-interactive:hover {
     border-color: #171717;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-.card-header-action {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.icon-arrow {
-    font-size: 12px;
-    color: var(--subtext);
-    transition: transform 0.2s ease;
-}
-
-.card-interactive:hover .icon-arrow {
-    color: var(--text);
-    transform: translateX(3px);
+.card-interactive:active {
+    transform: translateY(0) scale(0.99);
 }
 
 .monto-group {
@@ -312,34 +302,26 @@ button:hover {
     color: var(--text);
 }
 
-.sub-hint {
-    font-size: 10px;
-    text-transform: none;
-    font-weight: 400;
-    color: var(--subtext);
-    letter-spacing: 0;
-}
-
 .desglose-card h4 {
     margin-bottom: 15px;
 }
 
+/* HOVER DISCRETO PARA LAS FILAS DE CATEGORÍA */
 .desglose-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
+    padding: 12px 8px;
     border-bottom: 1px solid var(--border);
     font-size: 15px;
     cursor: pointer;
-    transition: background 0.15s ease;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .desglose-item:hover {
-    background-color: var(--bg);
-    padding-left: 6px;
-    padding-right: 6px;
-    border-radius: 8px;
+    background-color: var(--badge-bg);
+    transform: translateX(3px);
 }
 
 .desglose-item:last-child {
@@ -348,9 +330,6 @@ button:hover {
 
 .desglose-nombre {
     font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 6px;
 }
 
 .desglose-valores {
