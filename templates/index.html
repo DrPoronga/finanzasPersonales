@@ -73,7 +73,7 @@
                 </form>
             </section>
 
-            <!-- VISTA MÉTRICAS -->
+           <!-- VISTA MÉTRICAS -->
             <section id="vistaMetricas" class="hidden">
                 
                 <!-- FILTRO DE MESES -->
@@ -111,10 +111,10 @@
                     </div>
                 </div>
 
-                <!-- PRESCINDIBLE (CLICKABLE) -->
+                <!-- PRESCINDIBLE (CLICKABLE CON BADGE MOVIMIENTOS) -->
                 <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
                     <div class="card-header-action">
-                        <h3>Gastos que podría haber ahorrado</h3>
+                        <h3>Gastos prescindibles <span id="cntPrescindibles" class="count-badge"></span></h3>
                     </div>
                     <div class="monto-group">
                         <div class="monto-row">
@@ -128,25 +128,28 @@
                     </div>
                 </div>
 
-                <!-- MÉTRICAS BIMONEDA (CLICKABLE) -->
+                <!-- MÉTRICAS BIMONEDA (CLICKABLE CON BADGES Y COMPARATIVA) -->
                 <div class="metricas-grid">
                     <div class="card card-interactive" id="cardIngresos" title="Toca para ver el detalle de ingresos">
                         <div class="card-header-action">
-                            <h4>Ingresos</h4>
+                            <h4>Ingresos <span id="cntIngresos" class="count-badge"></span></h4>
                         </div>
                         <div class="monto-group-compact">
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblIngresosUYU" class="val">$0</span></div>
                             <div class="monto-row-compact"><span class="badge">USD</span><span id="lblIngresosUSD" class="val">US$0</span></div>
                         </div>
+                        <span id="lblCompIngresos" class="comparativa-tag"></span>
                     </div>
+
                     <div class="card card-interactive" id="cardGastos" title="Toca para ver el detalle de gastos">
                         <div class="card-header-action">
-                            <h4>Gastos</h4>
+                            <h4>Gastos <span id="cntGastos" class="count-badge"></span></h4>
                         </div>
                         <div class="monto-group-compact">
                             <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastosUYU" class="val">$0</span></div>
                             <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastosUSD" class="val">US$0</span></div>
                         </div>
+                        <span id="lblCompGastos" class="comparativa-tag"></span>
                     </div>
                 </div>
 
@@ -173,13 +176,12 @@
                     <span id="lblTopCategoria" class="top-cat-text">-</span>
                 </div>
 
-                <!-- DESGLOSE POR CATEGORÍA -->
+                <!-- DESGLOSE POR CATEGORÍA CON BARRAS PROPORCIONALES -->
                 <div class="card desglose-card">
                     <h4>Gastos por Categoría</h4>
                     <div id="listaDesglose"></div>
                 </div>
             </section>
-
             <div id="mensaje" class="hidden"></div>
         </div>
 

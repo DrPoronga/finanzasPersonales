@@ -201,39 +201,41 @@ button:hover {
    ========================================== */
 .card-interactive {
     cursor: pointer;
-    border: 1px solid #171717 !important;
-    /* Crea la base 3D minimalista en color negro sólido */
-    box-shadow: 0 3.5px 0 0 #171717 !important; 
-    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.2s ease;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 3.5px 0 0 var(--border) !important; 
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
     user-select: none;
     position: relative;
 }
 
-/* Indicador sutil (flecha) en los títulos para delatar que es un botón */
+/* Indicador gris sutil por defecto */
 .card-interactive h3::after, 
 .card-interactive h4::after {
     content: " ›";
     font-size: 15px;
     font-weight: 700;
-    color: var(--text);
+    color: var(--subtext);
     margin-left: 4px;
     display: inline-block;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+/* Al interactuar: se activan en NEGRO */
+.card-interactive:hover {
+    border-color: #171717 !important;
+    box-shadow: 0 3.5px 0 0 #171717 !important;
 }
 
 .card-interactive:hover h3::after,
 .card-interactive:hover h4::after {
+    color: var(--text);
     transform: translateX(3px);
 }
 
-.card-interactive:hover {
-    background-color: #F4F4F5;
-}
-
-/* Efecto 3D de hundimiento al presionar/hacer clic */
+/* Efecto 3D de hundimiento al presionar */
 .card-interactive:active {
     transform: translateY(3.5px);
-    box-shadow: 0 0 0 0 #171717 !important;
+    box-shadow: 0 0 0 0 transparent !important;
 }
 
 .monto-group {
@@ -566,3 +568,125 @@ button:hover {
     accent-color: var(--primary);
     cursor: pointer;
 }
+
+/* ==========================================
+   TARJETAS INTERACTIVAS (ESTILO BOTÓN 3D)
+   ========================================== */
+.card-interactive {
+    cursor: pointer;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 3.5px 0 0 var(--border) !important; 
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+    user-select: none;
+    position: relative;
+}
+
+/* Indicador gris sutil por defecto */
+.card-interactive h3::after, 
+.card-interactive h4::after {
+    content: " ›";
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--subtext);
+    margin-left: 2px;
+    display: inline-block;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+/* Al interactuar: se activan en NEGRO */
+.card-interactive:hover {
+    border-color: #171717 !important;
+    box-shadow: 0 3.5px 0 0 #171717 !important;
+}
+
+.card-interactive:hover h3::after,
+.card-interactive:hover h4::after {
+    color: var(--text);
+    transform: translateX(3px);
+}
+
+/* Efecto 3D de hundimiento al presionar */
+.card-interactive:active {
+    transform: translateY(3.5px);
+    box-shadow: 0 0 0 0 transparent !important;
+}
+
+/* BADGE DE CONTADOR DE MOVIMIENTOS */
+.count-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--subtext);
+    background: var(--badge-bg);
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 4px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+/* TAG DE COMPARATIVA VS MES ANTERIOR */
+.comparativa-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--subtext);
+    margin-top: 8px;
+    display: block;
+    letter-spacing: -0.2px;
+}
+
+/* ==========================================
+   DESGLOSE POR CATEGORÍA (BOTONES CON BARRA 3D)
+   ========================================== */
+.desglose-item {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background-color: var(--surface);
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 0 2.5px 0 0 var(--border);
+    transition: all 0.12s ease;
+}
+
+.desglose-item:hover {
+    border-color: #171717;
+    box-shadow: 0 2.5px 0 0 #171717;
+    background-color: var(--bg);
+}
+
+.desglose-item:active {
+    transform: translateY(2.5px);
+    box-shadow: 0 0 0 0 #171717;
+}
+
+.desglose-item::after {
+    content: "›";
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--subtext);
+    margin-left: 10px;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.desglose-item:hover::after {
+    color: var(--text);
+    transform: translateX(2px);
+}
+
+/* BARRA NEGRA FINITA DE PROPORCIÓN DE GASTO */
+.desglose-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background-color: #171717;
+    border-radius: 0 2px 2px 0;
+    transition: width 0.3s ease;
+}
+

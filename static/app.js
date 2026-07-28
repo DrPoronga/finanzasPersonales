@@ -172,6 +172,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 necesitaRecargarMetricas = false;
                 detallesTransaccionesCache = data.detalles || [];
 
+                // Contadores para Badges de Movimientos
+                const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
+                const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
+                const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
+
+                document.getElementById('cntPrescindibles').textContent = `${cntPrescindibles} movs`;
+                document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
+                document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
+
+                // Comparativas
+                document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
+                document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
+
                 // Disponible Hoy
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
                 document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
@@ -219,11 +232,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // Desglose por categoría
+                // Desglose por categoría con barras proporcionales
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
                 if (data.desglose && data.desglose.length > 0) {
+                    // Cálculo de gasto mayor para escala relativa de barras
+                    const maxGasto = Math.max(...data.desglose.map(d => d.monto_total_aprox || 0));
+
                     data.desglose.forEach(item => {
                         const divItem = document.createElement('div');
                         divItem.className = 'desglose-item';
@@ -237,11 +253,15 @@ document.addEventListener("DOMContentLoaded", () => {
                             valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
                         }
 
+                        // Porcentaje de la barra proporcional
+                        const porcentajeBarra = maxGasto > 0 ? ((item.monto_total_aprox / maxGasto) * 100).toFixed(1) : 0;
+
                         divItem.innerHTML = `
                             <span class="desglose-nombre">${item.categoria}</span>
                             <div class="desglose-valores">
                                 ${valoresHtml}
                             </div>
+                            <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
                         `;
 
                         divItem.addEventListener('click', () => {

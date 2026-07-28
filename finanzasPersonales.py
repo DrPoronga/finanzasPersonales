@@ -242,6 +242,14 @@ def obtener_metricas():
         mes_actual_nombre = MESES[ahora.month]
         mes_solicitado = request.args.get('mes', mes_actual_nombre).upper().strip()
 
+        # Determinación del mes anterior para comparativa
+        MESES_INV = {v: k for k, v in MESES.items()}
+        mes_prev_nombre = None
+        if mes_solicitado in MESES_INV:
+            num_mes = MESES_INV[mes_solicitado]
+            num_mes_prev = 12 if num_mes == 1 else num_mes - 1
+            mes_prev_nombre = MESES[num_mes_prev]
+
         # Acumulados Históricos (Banco)
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
@@ -250,6 +258,10 @@ def obtener_metricas():
         ingresos_filtrado_usd, gastos_filtrado_usd, prescindible_filtrado_usd = 0.0, 0.0, 0.0
         ingresos_filtrado_uyu, gastos_filtrado_uyu, prescindible_filtrado_uyu = 0.0, 0.0, 0.0
         
+        # Totales mes anterior (para comparativa)
+        ingresos_prev_usd, gastos_prev_usd = 0.0, 0.0
+        ingresos_prev_uyu, gastos_prev_uyu = 0.0, 0.0
+
         gastos_por_categoria = {}
         meses_encontrados = set()
 
@@ -287,6 +299,15 @@ def obtener_metricas():
 
                 if mes_registro == mes_actual_nombre:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
+
+            # Datos mes anterior para comparativa
+            if mes_prev_nombre and mes_registro == mes_prev_nombre:
+                if tipo == 'Activo':
+                    if moneda == 'USD': ingresos_prev_usd += monto
+                    else: ingresos_prev_uyu += monto
+                else:
+                    if moneda == 'USD': gastos_prev_usd += monto
+                    else: gastos_prev_uyu += monto
 
             # Filtro mes
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
@@ -355,6 +376,19 @@ def obtener_metricas():
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
+        # Cálculo de comparativas (%)
+        def calcular_comparativa(act_uyu, act_usd, prev_uyu, prev_usd):
+            tot_act = act_uyu + (act_usd * 40)
+            tot_prev = prev_uyu + (prev_usd * 40)
+            if tot_prev <= 0 or mes_solicitado == "TODOS":
+                return ""
+            diff = ((tot_act - tot_prev) / tot_prev) * 100
+            flecha = "↑" if diff > 0 else ("↓" if diff < 0 else "=")
+            return f"{flecha} {abs(diff):.1f}% vs {mes_prev_nombre}"
+
+        comp_gastos = calcular_comparativa(gastos_filtrado_uyu, gastos_filtrado_usd, gastos_prev_uyu, gastos_prev_usd)
+        comp_ingresos = calcular_comparativa(ingresos_filtrado_uyu, ingresos_filtrado_usd, ingresos_prev_uyu, ingresos_prev_usd)
+
         top_cat = "-"
         if gastos_por_categoria:
             top_cat = max(gastos_por_categoria, key=lambda c: (gastos_por_categoria[c]['USD'] * 40) + gastos_por_categoria[c]['UYU'])
@@ -365,7 +399,8 @@ def obtener_metricas():
                 desglose.append({
                     "categoria": cat,
                     "monto_uyu": f"${montos['UYU']:,.0f} UYU" if montos['UYU'] > 0 else None,
-                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else None
+                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else None,
+                    "monto_total_aprox": montos['UYU'] + (montos['USD'] * 40)
                 })
 
         lista_meses = list(MESES.values())
@@ -389,6 +424,8 @@ def obtener_metricas():
             "gasto_diario_usd": f"US${gasto_diario_usd:,.2f}",
             "tasa_ahorro_uyu": f"{tasa_ahorro_uyu:.1f}%",
             "tasa_ahorro_usd": f"{tasa_ahorro_usd:.1f}%",
+            "comp_gastos": comp_gastos,
+            "comp_ingresos": comp_ingresos,
             "top_categoria": top_cat,
             "desglose": desglose,
             "detalles": detalles_filtrados
@@ -399,6 +436,5 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-
 if __name__ == '__main__':
     app.run(debug=True)
