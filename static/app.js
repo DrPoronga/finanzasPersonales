@@ -25,10 +25,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const conceptoInput = document.getElementById('concepto');
     const montoInput = document.getElementById('monto');
     const selectMoneda = document.getElementById('selectMoneda');
+    const selectMedioPago = document.getElementById('selectMedioPago');
     const chkPrescindible = document.getElementById('chkPrescindible');
     const containerPrescindible = document.getElementById('containerPrescindible');
     const btnSubmit = document.getElementById('btnSubmit');
     const mensajeDiv = document.getElementById('mensaje');
+
+    // Toggles
+    const radioBanco = document.getElementById('pagoBanco');
+    const radioTickets = document.getElementById('pagoTickets');
+    const msgTicketsStatus = document.getElementById('msgTicketsStatus');
 
     // Métricas
     const selectMesFiltro = document.getElementById('selectMesFiltro');
@@ -55,26 +61,25 @@ document.addEventListener("DOMContentLoaded", () => {
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
     let detallesTransaccionesCache = [];
-	let gastosFijosCache = [];
+    let gastosFijosCache = [];
+    let saldoTicketsDisponibleNum = 0;
     const cardFijos = document.getElementById('cardFijos');
 
     checkAutenticacion();
 	
-	// Normalización de comas y formateo automático de decimales (.00)
+	// Normalización de comas y decimales (.00)
 	montoInput.addEventListener('input', () => {
-		// Reemplaza comas por puntos automáticamente mientras escribes
 		montoInput.value = montoInput.value.replace(',', '.');
 	});
 
 	montoInput.addEventListener('blur', () => {
 		let val = montoInput.value.trim();
 		if (val !== '' && !isNaN(val)) {
-			// Al salir del input, fija siempre 2 decimales (ej: 118 -> 118.00 | 118.16 -> 118.16)
 			montoInput.value = parseFloat(val).toFixed(2);
 		}
 	});
 
-	// LOGICA DEL SELECTOR DE MONEDA (TOGGLE)
+	// TOGGLE DE MONEDA
 	const radioUYU = document.getElementById('monedaUYU');
 	const radioUSD = document.getElementById('monedaUSD');
 	const inputMoneda = document.getElementById('selectMoneda');
@@ -83,6 +88,27 @@ document.addEventListener("DOMContentLoaded", () => {
 		radioUYU.addEventListener('change', () => inputMoneda.value = 'UYU');
 		radioUSD.addEventListener('change', () => inputMoneda.value = 'USD');
 	}
+
+    // TOGGLE DE MEDIO DE PAGO
+    if (radioBanco && radioTickets) {
+        radioBanco.addEventListener('change', () => {
+            selectMedioPago.value = 'Banco';
+            msgTicketsStatus.classList.add('hidden');
+        });
+
+        radioTickets.addEventListener('change', () => {
+            if (tipoActual === 'Pasivo' && saldoTicketsDisponibleNum <= 0) {
+                // Si el saldo está en 0 y es un gasto, avisamos y forzamos a Banco
+                radioBanco.checked = true;
+                selectMedioPago.value = 'Banco';
+                msgTicketsStatus.classList.remove('hidden');
+            } else {
+                selectMedioPago.value = 'Tickets';
+                msgTicketsStatus.classList.add('hidden');
+            }
+        });
+    }
+
     async function checkAutenticacion() {
         try {
             const res = await fetch('/check_auth');
@@ -186,203 +212,220 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-async function cargarMetricas(mesSeleccionado = '') {
-    try {
-        const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
-        const res = await fetch(url);
-        if (res.status === 401) { bloquearApp(); return; }
-        
-        const data = await res.json();
-        if (data.status === 'success') {
+    async function cargarMetricas(mesSeleccionado = '') {
+        try {
+            const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+            const res = await fetch(url);
+            if (res.status === 401) { bloquearApp(); return; }
             
-            // GAMIFICACIÓN: RACHA
-            const lblRachaDias = document.getElementById('lblRachaDias');
-            const racha = data.racha_dias || 0;
-            if (lblRachaDias) {
-                lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
-            }
-
-            // GAMIFICACIÓN: OBJETIVOS SEMANAL Y MENSUAL
-            document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
-            document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
-            document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
-
-            document.getElementById('lblMetaMensual').textContent = `Meta: ${data.meta_mensual_uyu}`;
-            document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
-            document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
-
-            // BARRA DE PROGRESO MENSUAL
-            const pctUtilizado = data.pct_prescindible_utilizado || 0;
-            const fillBar = document.getElementById('barPrescindibleFill');
-            
-            if (fillBar) {
-                fillBar.style.width = `${pctUtilizado}%`;
-                fillBar.classList.remove('fill-warning', 'fill-danger');
-                if (pctUtilizado > 85) {
-                    fillBar.classList.add('fill-danger');
-                } else if (pctUtilizado > 60) {
-                    fillBar.classList.add('fill-warning');
+            const data = await res.json();
+            if (data.status === 'success') {
+                
+                // SALDO TICKETS
+                saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
+                const lblSaldoTickets = document.getElementById('lblSaldoTickets');
+                if (lblSaldoTickets) {
+                    lblSaldoTickets.textContent = data.saldo_tickets_uyu;
                 }
-            }
 
-            // === CONTROL DE VENCIMIENTOS (GASTOS FIJOS) ===
-            const listaFijos = document.getElementById('listaFijos');
-            if (listaFijos) {
-                listaFijos.innerHTML = '';
-                gastosFijosCache = data.fijos || [];
-                const top3 = gastosFijosCache.slice(0, 3);
-
-                if (top3.length > 0) {
-                    top3.forEach(fijo => {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.className = 'fijo-item';
-
-                        const esPagado = fijo.estado === 'Pagado';
-                        const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
-                        const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
-                        const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
-
-                        const textoMonto = esPagado 
-                            ? `<span>Pagado: <strong>${montoFmt}</strong></span>`
-                            : `<span style="color: var(--subtext);">Pendiente de pago</span>`;
-
-                        itemDiv.innerHTML = `
-                            <div class="fijo-header">
-                                <span class="fijo-nombre">${fijo.concepto}</span>
-                                <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
-                            </div>
-                            <div class="fijo-monto">
-                                ${textoMonto}
-                            </div>
-                        `;
-                        listaFijos.appendChild(itemDiv);
-                    });
+                // GAMIFICACIÓN: RACHA
+                const lblRachaDias = document.getElementById('lblRachaDias');
+                const racha = data.racha_dias || 0;
+                if (lblRachaDias) {
+                    lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
                 }
-            }
-            
-            necesitaRecargarMetricas = false;
-            detallesTransaccionesCache = data.detalles || [];
 
-            // Contadores
-            const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
-            const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
-            const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
+                // GAMIFICACIÓN: OBJETIVOS
+                document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
+                document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
+                document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
 
-            document.getElementById('cntPrescindibles').textContent = `${cntPrescindibles} movs`;
-            document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
-            document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
+                document.getElementById('lblMetaMensual').textContent = `Meta: ${data.meta_mensual_uyu}`;
+                document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
+                document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
 
-            // Comparativas
-            document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
-            document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
+                // BARRA
+                const pctUtilizado = data.pct_prescindible_utilizado || 0;
+                const fillBar = document.getElementById('barPrescindibleFill');
+                if (fillBar) {
+                    fillBar.style.width = `${pctUtilizado}%`;
+                    fillBar.classList.remove('fill-warning', 'fill-danger');
+                    if (pctUtilizado > 85) {
+                        fillBar.classList.add('fill-danger');
+                    } else if (pctUtilizado > 60) {
+                        fillBar.classList.add('fill-warning');
+                    }
+                }
 
-            // Disponible Hoy
-            document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
-            document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
+                // CONTROL DE FIJOS
+                const listaFijos = document.getElementById('listaFijos');
+                if (listaFijos) {
+                    listaFijos.innerHTML = '';
+                    gastosFijosCache = data.fijos || [];
+                    const top3 = gastosFijosCache.slice(0, 3);
 
-            // Banco
-            document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
-            document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
+                    if (top3.length > 0) {
+                        top3.forEach(fijo => {
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'fijo-item';
 
-            // Prescindible
-            document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
-            document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
+                            const esPagado = fijo.estado === 'Pagado';
+                            const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                            const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                            const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
 
-            // Ingresos
-            document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
-            document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
+                            const textoMonto = esPagado 
+                                ? `<span>Pagado: <strong>${montoFmt}</strong></span>`
+                                : `<span style="color: var(--subtext);">Pendiente de pago</span>`;
 
-            // Gastos
-            document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
-            document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
+                            itemDiv.innerHTML = `
+                                <div class="fijo-header">
+                                    <span class="fijo-nombre">${fijo.concepto}</span>
+                                    <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
+                                </div>
+                                <div class="fijo-monto">
+                                    ${textoMonto}
+                                </div>
+                            `;
+                            listaFijos.appendChild(itemDiv);
+                        });
+                    }
+                }
+                
+                necesitaRecargarMetricas = false;
+                detallesTransaccionesCache = data.detalles || [];
 
-            // Promedio Diario
-            document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
-            document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
+                // Contadores
+                const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
+                const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
+                const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
 
-            // Tasa Ahorro
-            document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
-            document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
+                document.getElementById('cntPrescindibles').textContent = `${cntPrescindibles} movs`;
+                document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
+                document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
 
-            // Top Categoria
-            document.getElementById('lblTopCategoria').textContent = data.top_categoria;
+                // Comparativas
+                document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
+                document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
 
-            // Desplegable de meses
-            selectMesFiltro.innerHTML = '';
-            data.meses_disponibles.forEach(mes => {
-                const opt = document.createElement('option');
-                opt.value = mes;
-                opt.textContent = mes;
-                if (mes === data.mes_actual) opt.selected = true;
-                selectMesFiltro.appendChild(opt);
-            });
+                // Disponible Hoy
+                document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
+                document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
 
-            const optTodos = document.createElement('option');
-            optTodos.value = "TODOS";
-            optTodos.textContent = "TODO EL HISTORIAL";
-            if (data.mes_actual === "TODOS") optTodos.selected = true;
-            selectMesFiltro.appendChild(optTodos);
+                // Banco
+                document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
+                document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
 
-            // Desglose
-            const listaContainer = document.getElementById('listaDesglose');
-            listaContainer.innerHTML = '';
+                // Prescindible
+                document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
+                document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
-            if (data.desglose && data.desglose.length > 0) {
-                const maxGasto = Math.max(...data.desglose.map(d => d.monto_total_aprox || 0));
+                // Ingresos
+                document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
+                document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
 
-                data.desglose.forEach(item => {
-                    const divItem = document.createElement('div');
-                    divItem.className = 'desglose-item';
-                    divItem.setAttribute('data-categoria', item.categoria);
-                    
-                    let valoresHtml = '';
-                    if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
-                    if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+                // Gastos
+                document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
+                document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
 
-                    const porcentajeBarra = maxGasto > 0 ? ((item.monto_total_aprox / maxGasto) * 100).toFixed(1) : 0;
+                // Promedio Diario
+                document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
+                document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
-                    divItem.innerHTML = `
-                        <span class="desglose-nombre">${item.categoria}</span>
-                        <div class="desglose-valores">${valoresHtml}</div>
-                        <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
-                    `;
+                // Tasa Ahorro
+                document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
+                document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
-                    divItem.addEventListener('click', () => {
-                        abrirModalDetalles('categoria', item.categoria);
-                    });
+                // Top Categoria
+                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
-                    listaContainer.appendChild(divItem);
+                // Desplegable de meses
+                selectMesFiltro.innerHTML = '';
+                data.meses_disponibles.forEach(mes => {
+                    const opt = document.createElement('option');
+                    opt.value = mes;
+                    opt.textContent = mes;
+                    if (mes === data.mes_actual) opt.selected = true;
+                    selectMesFiltro.appendChild(opt);
                 });
-            } else {
-                listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
+
+                const optTodos = document.createElement('option');
+                optTodos.value = "TODOS";
+                optTodos.textContent = "TODO EL HISTORIAL";
+                if (data.mes_actual === "TODOS") optTodos.selected = true;
+                selectMesFiltro.appendChild(optTodos);
+
+                // TOP ÍTEMS
+                const listaConceptosContainer = document.getElementById('listaConceptos');
+                if (listaConceptosContainer) {
+                    listaConceptosContainer.innerHTML = '';
+                    if (data.desglose_conceptos && data.desglose_conceptos.length > 0) {
+                        const maxConcepto = Math.max(...data.desglose_conceptos.map(d => d.monto_total_aprox || 0));
+
+                        data.desglose_conceptos.slice(0, 8).forEach(item => {
+                            const divItem = document.createElement('div');
+                            divItem.className = 'desglose-item';
+                            
+                            let valoresHtml = '';
+                            if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
+                            if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+
+                            const porcentajeBarra = maxConcepto > 0 ? ((item.monto_total_aprox / maxConcepto) * 100).toFixed(1) : 0;
+
+                            divItem.innerHTML = `
+                                <div>
+                                    <span class="desglose-nombre">${item.concepto}</span>
+                                    <span class="concepto-subcat">${item.categoria}</span>
+                                </div>
+                                <div class="desglose-valores">${valoresHtml}</div>
+                                <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
+                            `;
+                            listaConceptosContainer.appendChild(divItem);
+                        });
+                    } else {
+                        listaConceptosContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin datos registrados.</div>';
+                    }
+                }
+
+                // DESGLOSE POR CATEGORÍA
+                const listaContainer = document.getElementById('listaDesglose');
+                listaContainer.innerHTML = '';
+
+                if (data.desglose && data.desglose.length > 0) {
+                    const maxGasto = Math.max(...data.desglose.map(d => d.monto_total_aprox || 0));
+
+                    data.desglose.forEach(item => {
+                        const divItem = document.createElement('div');
+                        divItem.className = 'desglose-item';
+                        divItem.setAttribute('data-categoria', item.categoria);
+                        
+                        let valoresHtml = '';
+                        if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
+                        if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+
+                        const porcentajeBarra = maxGasto > 0 ? ((item.monto_total_aprox / maxGasto) * 100).toFixed(1) : 0;
+
+                        divItem.innerHTML = `
+                            <span class="desglose-nombre">${item.categoria}</span>
+                            <div class="desglose-valores">${valoresHtml}</div>
+                            <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
+                        `;
+
+                        divItem.addEventListener('click', () => {
+                            abrirModalDetalles('categoria', item.categoria);
+                        });
+
+                        listaContainer.appendChild(divItem);
+                    });
+                } else {
+                    listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
+                }
             }
+        } catch (error) {
+            console.error("Error cargando métricas", error);
         }
-    } catch (error) {
-        console.error("Error cargando métricas", error);
     }
-}
 
-    // TARJETAS INTERACTIVAS
-    cardPrescindible.addEventListener('click', () => {
-        abrirModalDetalles('prescindibles');
-    });
-
-    cardIngresos.addEventListener('click', () => {
-        abrirModalDetalles('ingresos');
-    });
-
-    cardGastos.addEventListener('click', () => {
-        abrirModalDetalles('gastos');
-    });
-
-	// AGREGAR ESTO AQUÍ ABAJO:
-    if (cardFijos) {
-        cardFijos.addEventListener('click', () => {
-            abrirModalDetalles('fijos');
-        });
-    }
-	
-// ABRIR Y MOSTRAR DETALLES
     function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
         let listaFiltrada = [];
         let titulo = '';
@@ -405,7 +448,6 @@ async function cargarMetricas(mesSeleccionado = '') {
 
         tituloModalDetalle.textContent = titulo;
 
-        // Si es el modal de gastos fijos
         if (filtroTipo === 'fijos') {
             const pend = gastosFijosCache.filter(f => f.estado === 'Pendiente').length;
             const pag = gastosFijosCache.filter(f => f.estado === 'Pagado').length;
@@ -447,7 +489,7 @@ async function cargarMetricas(mesSeleccionado = '') {
             return;
         }
 
-        // Lógica para los demás botones (Prescindibles, Ingresos, Gastos, Categoría)
+        // Totales Generales
         let sumUSD = 0;
         let sumUYU = 0;
         listaFiltrada.forEach(item => {
@@ -461,8 +503,32 @@ async function cargarMetricas(mesSeleccionado = '') {
         if (sumUSD === 0 && sumUYU === 0) resumenHtml = '<div>Sin movimientos registrados</div>';
 
         resumenModalDetalle.innerHTML = resumenHtml;
-
         listaModalDetalle.innerHTML = '';
+
+        if (filtroTipo === 'categoria' && listaFiltrada.length > 0) {
+            const agrupado = {};
+            listaFiltrada.forEach(item => {
+                const conc = item.concepto.trim();
+                if (!agrupado[conc]) agrupado[conc] = { uyu: 0, usd: 0 };
+                if (item.moneda === 'USD') agrupado[conc].usd += item.monto;
+                else agrupado[conc].uyu += item.monto;
+            });
+
+            const subBox = document.createElement('div');
+            subBox.className = 'subdesglose-box';
+            let subHtml = '<strong style="display:block; margin-bottom: 6px; font-size:12px; color:var(--subtext);">TOTALES POR ÍTEM:</strong>';
+
+            Object.keys(agrupado).sort((a,b) => agrupado[b].uyu - agrupado[a].uyu).forEach(conc => {
+                const mUYU = agrupado[conc].uyu > 0 ? `$${agrupado[conc].uyu.toLocaleString('es-UY', {maximumFractionDigits:0})}` : '';
+                const mUSD = agrupado[conc].usd > 0 ? `US$${agrupado[conc].usd.toLocaleString('en-US', {minimumFractionDigits:2})}` : '';
+                const mFmt = [mUYU, mUSD].filter(Boolean).join(' / ');
+                subHtml += `<div class="subdesglose-row"><span>${conc}</span><strong>${mFmt}</strong></div>`;
+            });
+
+            subBox.innerHTML = subHtml;
+            listaModalDetalle.appendChild(subBox);
+        }
+
         if (listaFiltrada.length === 0) {
             listaModalDetalle.innerHTML = '<div style="color: var(--subtext); text-align: center; padding: 20px;">No hay registros para este filtro.</div>';
         } else {
@@ -477,6 +543,7 @@ async function cargarMetricas(mesSeleccionado = '') {
                     : `${signo}$${item.monto.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
 
                 const badgePrescindible = item.prescindible ? '<span class="badge-prescindible">Prescindible</span>' : '';
+                const medioPagoTag = item.medio_pago === 'Tickets' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">Tickets</span>' : '';
                 const fechaTexto = `${item.fecha} ${item.hora}`;
 
                 itemDiv.innerHTML = `
@@ -485,6 +552,7 @@ async function cargarMetricas(mesSeleccionado = '') {
                         <div class="detalle-sub">
                             <span>${fechaTexto}</span> • 
                             <span>${item.categoria}</span>
+                            ${medioPagoTag}
                             ${badgePrescindible}
                         </div>
                     </div>
@@ -499,7 +567,12 @@ async function cargarMetricas(mesSeleccionado = '') {
         modalDetalle.classList.remove('hidden');
     }
 
-    // CIERRE AL TOCAR FUERA DE LA VENTANA MODAL
+    // TARJETAS INTERACTIVAS
+    cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
+    cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });
+    cardGastos.addEventListener('click', () => { abrirModalDetalles('gastos'); });
+    if (cardFijos) { cardFijos.addEventListener('click', () => { abrirModalDetalles('fijos'); }); }
+
     modalDetalle.addEventListener('click', (e) => {
         if (e.target === modalDetalle) {
             modalDetalle.classList.add('hidden');
@@ -512,16 +585,16 @@ async function cargarMetricas(mesSeleccionado = '') {
         const valorLimpio = montoInput.value.replace(',', '.').trim();
 		const monto = parseFloat(valorLimpio);
         const moneda = selectMoneda.value;
+        const medio_pago = selectMedioPago.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
-        gastoPendiente = { concepto, monto, moneda, tipo: tipoActual, prescindible };
+        gastoPendiente = { concepto, monto, moneda, medio_pago, tipo: tipoActual, prescindible };
         enviarMovimiento(gastoPendiente);
     });
 
     async function enviarMovimiento(datos) {
-        const textoOriginal = btnSubmit.textContent;
         btnSubmit.textContent = "Procesando...";
         btnSubmit.disabled = true;
 
@@ -542,6 +615,9 @@ async function cargarMetricas(mesSeleccionado = '') {
                 mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
                 chkPrescindible.checked = false;
+                radioBanco.checked = true;
+                selectMedioPago.value = 'Banco';
+                msgTicketsStatus.classList.add('hidden');
                 gastoPendiente = null;
                 necesitaRecargarMetricas = true;
             } else {

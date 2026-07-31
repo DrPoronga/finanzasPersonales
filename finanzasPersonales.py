@@ -182,6 +182,11 @@ def registrar_gasto():
     if tipo_ingresado not in ['Activo', 'Pasivo']:
         return jsonify({"status": "error", "message": "Tipo no válido."}), 400
 
+    # Nuevo: Medio de pago (Banco vs Tickets)
+    medio_pago = str(datos.get('medio_pago', 'Banco')).strip().capitalize()
+    if medio_pago not in ['Banco', 'Tickets']:
+        medio_pago = 'Banco'
+
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
     if nueva_categoria:
@@ -189,7 +194,7 @@ def registrar_gasto():
 
     ahora = datetime.now()
     fecha_hoy = ahora.strftime("%d/%m/%Y")
-    hora_actual = ahora.strftime("%H:%M")
+    hora_actual = me_hora = ahora.strftime("%H:%M")
     nombre_mes = MESES[ahora.month]
 
     try:
@@ -215,7 +220,8 @@ def registrar_gasto():
                     "categorias": categorias_unicas
                 })
 
-        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible])
+        # Guardamos el medio_pago en la columna 10
+        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible, medio_pago])
 
         invalidar_cache()
 
@@ -231,6 +237,7 @@ def registrar_gasto():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
@@ -253,6 +260,9 @@ def obtener_metricas():
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
 
+        # Acumulados Históricos (Tickets Alimentación)
+        ingresos_tickets_uyu, gastos_tickets_uyu = 0.0, 0.0
+
         # Totales mes filtrado
         ingresos_filtrado_usd, gastos_filtrado_usd, prescindible_filtrado_usd = 0.0, 0.0, 0.0
         ingresos_filtrado_uyu, gastos_filtrado_uyu, prescindible_filtrado_uyu = 0.0, 0.0, 0.0
@@ -262,19 +272,18 @@ def obtener_metricas():
         ingresos_prev_uyu, gastos_prev_uyu = 0.0, 0.0
 
         gastos_por_categoria = {}
+        gastos_por_concepto_especifico = {}
         meses_encontrados = set()
 
         historial_fijos = {'USD': {}, 'UYU': {}}
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
 
-        # Estructura para promedio histórico de prescindibles por mes
         prescindibles_historicos_uyu = {}
         prescindibles_historicos_usd = {}
 
         detalles_filtrados = []
         fechas_prescindibles = []
         
-        # Gastos prescindibles de la semana actual del mes
         gastado_semana_actual_uyu = 0.0
         gastado_semana_actual_usd = 0.0
         inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
@@ -284,9 +293,11 @@ def obtener_metricas():
             moneda = str(r.get('Moneda', 'UYU')).strip().upper() or 'UYU'
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
+            concepto_raw = str(r.get('Concepto', '')).strip()
             presc = str(r.get('Prescindible', '')).strip().capitalize()
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
+            medio_pago = str(r.get('Medio de Pago', 'Banco')).strip().capitalize() if r.get('Medio de Pago') else 'Banco'
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
@@ -294,36 +305,38 @@ def obtener_metricas():
             es_prescindible = presc in ['Sí', 'Si', 'True']
             es_no_prescindible = not es_prescindible
 
-            # Acumular prescindibles por mes para el promedio histórico
             if tipo == 'Pasivo' and es_prescindible and mes_registro:
                 if moneda == 'USD':
                     prescindibles_historicos_usd[mes_registro] = prescindibles_historicos_usd.get(mes_registro, 0.0) + monto
                 else:
                     prescindibles_historicos_uyu[mes_registro] = prescindibles_historicos_uyu.get(mes_registro, 0.0) + monto
 
-            # Guardar fechas de prescindibles para la Racha
             if tipo == 'Pasivo' and es_prescindible and fecha_str:
                 try:
                     dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                     fechas_prescindibles.append(dt)
 
-                    # Calcular cuánto se gastó en prescindibles esta semana
                     if dt >= inicio_semana_actual:
                         if moneda == 'USD': gastado_semana_actual_usd += monto
                         else: gastado_semana_actual_uyu += monto
                 except ValueError:
                     pass
 
-            # Banco
-            if moneda == 'USD':
-                if tipo == 'Activo': ingresos_acum_usd += monto
-                else: gastos_acum_usd += monto
+            # SEPARACIÓN BANCO VS TICKETS
+            if medio_pago == 'Tickets':
+                if tipo == 'Activo': ingresos_tickets_uyu += monto
+                else: gastos_tickets_uyu += monto
             else:
-                if tipo == 'Activo': ingresos_acum_uyu += monto
-                else: gastos_acum_uyu += monto
+                # Banco / Efectivo Normal
+                if moneda == 'USD':
+                    if tipo == 'Activo': ingresos_acum_usd += monto
+                    else: gastos_acum_usd += monto
+                else:
+                    if tipo == 'Activo': ingresos_acum_uyu += monto
+                    else: gastos_acum_uyu += monto
 
-            # Pronóstico Fijos
-            if tipo == 'Pasivo' and es_no_prescindible and mes_registro:
+            # Pronóstico Fijos (solo aplica a Banco)
+            if medio_pago != 'Tickets' and tipo == 'Pasivo' and es_no_prescindible and mes_registro:
                 if cat not in historial_fijos[moneda]:
                     historial_fijos[moneda][cat] = {}
                 historial_fijos[moneda][cat][mes_registro] = historial_fijos[moneda][cat].get(mes_registro, 0.0) + monto
@@ -350,43 +363,49 @@ def obtener_metricas():
                     if cat not in gastos_por_categoria:
                         gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
 
+                    conc_key = concepto_raw.title()
+                    if conc_key not in gastos_por_concepto_especifico:
+                        gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
+
                     if moneda == 'USD':
                         gastos_filtrado_usd += monto
                         gastos_por_categoria[cat]['USD'] += monto
+                        gastos_por_concepto_especifico[conc_key]['USD'] += monto
                         if es_prescindible: prescindible_filtrado_usd += monto
                     else:
                         gastos_filtrado_uyu += monto
                         gastos_por_categoria[cat]['UYU'] += monto
+                        gastos_por_concepto_especifico[conc_key]['UYU'] += monto
                         if es_prescindible: prescindible_filtrado_uyu += monto
 
                 detalles_filtrados.append({
                     "fecha": fecha_str,
                     "hora": str(r.get('Hora', '')).strip(),
-                    "concepto": str(r.get('Concepto', '')).strip(),
+                    "concepto": concepto_raw,
                     "monto": monto,
                     "moneda": moneda,
                     "categoria": cat,
                     "tipo": tipo,
-                    "prescindible": es_prescindible
+                    "prescindible": es_prescindible,
+                    "medio_pago": medio_pago
                 })
+
+        # Saldo real de Tickets Alimentación
+        saldo_tickets_uyu = ingresos_tickets_uyu - gastos_tickets_uyu
 
         # CÁLCULO DE PROMEDIO HISTÓRICO DE PRESCINDIBLES
         cant_meses_hist = max(1, len(prescindibles_historicos_uyu))
         promedio_prescindible_uyu = sum(prescindibles_historicos_uyu.values()) / cant_meses_hist if prescindibles_historicos_uyu else prescindible_filtrado_uyu
-        if promedio_prescindible_uyu <= 0: promedio_prescindible_uyu = 4000.0  # Base por defecto si está vacío
+        if promedio_prescindible_uyu <= 0: promedio_prescindible_uyu = 4000.0
 
-        # OBJETIVO MENSUAL (Reducir 20% respecto al promedio histórico)
         meta_mensual_prescindible_uyu = promedio_prescindible_uyu * 0.80
         disponible_meta_mensual_uyu = meta_mensual_prescindible_uyu - prescindible_filtrado_uyu
 
-        # OBJETIVO SEMANAL (Tope mensual dividido en 4 semanas)
         meta_semanal_prescindible_uyu = meta_mensual_prescindible_uyu / 4.0
         disponible_meta_semanal_uyu = meta_semanal_prescindible_uyu - gastado_semana_actual_uyu
 
-        # Porcentaje de la meta consumida este mes
         pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / meta_mensual_prescindible_uyu * 100)) if meta_mensual_prescindible_uyu > 0 else 0.0
 
-        # CÁLCULO DE RACHA (DÍAS INVICTO)
         hoy_date = ahora.date()
         if not fechas_prescindibles:
             racha_dias = 30
@@ -460,6 +479,17 @@ def obtener_metricas():
                     "monto_total_aprox": montos['UYU'] + (montos['USD'] * 40)
                 })
 
+        desglose_conceptos = []
+        for conc, montos in sorted(gastos_por_concepto_especifico.items(), key=lambda item: (item[1]['USD'] * 40) + item[1]['UYU'], reverse=True):
+            if montos['USD'] > 0 or montos['UYU'] > 0:
+                desglose_conceptos.append({
+                    "concepto": conc,
+                    "categoria": montos['categoria'],
+                    "monto_uyu": f"${montos['UYU']:,.0f} UYU" if montos['UYU'] > 0 else None,
+                    "monto_usd": f"US${montos['USD']:,.2f}" if montos['USD'] > 0 else None,
+                    "monto_total_aprox": montos['UYU'] + (montos['USD'] * 40)
+                })
+
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
@@ -512,6 +542,8 @@ def obtener_metricas():
             "mes_actual": mes_solicitado,
             "meses_disponibles": meses_ordenados,
             "racha_dias": racha_dias,
+            "saldo_tickets_uyu": f"${saldo_tickets_uyu:,.0f}",
+            "saldo_tickets_num": saldo_tickets_uyu,
             "meta_semanal_uyu": f"${meta_semanal_prescindible_uyu:,.0f}",
             "gastado_semana_uyu": f"${gastado_semana_actual_uyu:,.0f}",
             "disponible_semana_uyu": f"${disponible_meta_semanal_uyu:,.0f}",
@@ -537,6 +569,7 @@ def obtener_metricas():
             "comp_ingresos": comp_ingresos,
             "top_categoria": top_cat,
             "desglose": desglose,
+            "desglose_conceptos": desglose_conceptos,
             "detalles": detalles_filtrados,
             "fijos": detalles_fijos
         })
@@ -546,6 +579,6 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+     
 if __name__ == '__main__':
     app.run(debug=True)

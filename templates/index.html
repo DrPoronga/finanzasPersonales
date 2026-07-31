@@ -55,7 +55,7 @@
                         <input type="text" id="monto" placeholder="Monto (ej: 1234.00)" inputmode="decimal" required>
                     </div>
 
-                    <!-- SELECTOR DE MONEDA ESTILO PASTILLA (TOGGLE) -->
+                    <!-- SELECTOR DE MONEDA ESTILO PASTILLA -->
                     <div class="form-group">
                         <div class="currency-toggle">
                             <input type="radio" id="monedaUYU" name="monedaRadio" value="UYU" checked>
@@ -69,6 +69,21 @@
                         <input type="hidden" id="selectMoneda" value="UYU">
                     </div>
 
+                    <!-- SELECTOR DE CUENTA / MEDIO DE PAGO -->
+                    <div class="form-group">
+                        <div class="payment-toggle">
+                            <input type="radio" id="pagoBanco" name="pagoRadio" value="Banco" checked>
+                            <label for="pagoBanco">Banco / Efectivo</label>
+
+                            <input type="radio" id="pagoTickets" name="pagoRadio" value="Tickets">
+                            <label for="pagoTickets" id="lblPagoTickets">Tickets Alimentación</label>
+                            
+                            <div class="toggle-slider-pago"></div>
+                        </div>
+                        <input type="hidden" id="selectMedioPago" value="Banco">
+                        <span id="msgTicketsStatus" class="tickets-status-msg hidden">⚠️ Saldo $0 en Tickets (Abonas con Banco)</span>
+                    </div>
+
                     <div id="containerPrescindible" class="form-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="chkPrescindible">
@@ -80,8 +95,7 @@
                 </form>
             </section>
 
-           <!-- VISTA MÉTRICAS -->
-           <!-- VISTA MÉTRICAS -->
+            <!-- VISTA MÉTRICAS -->
             <section id="vistaMetricas" class="hidden">
                 
                 <!-- FILTRO DE MESES -->
@@ -97,6 +111,17 @@
                             <h3 id="lblRachaTitulo">Racha Invicto</h3>
                             <span id="lblRachaDias" class="racha-count">0 Días</span>
                             <p class="racha-sub">sin gastos prescindibles</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TARJETA SALDO TICKETS ALIMENTACIÓN -->
+                <div class="card tickets-card">
+                    <h3>Saldo Tickets Alimentación</h3>
+                    <div class="monto-group">
+                        <div class="monto-row">
+                            <span class="badge">TICKETS</span>
+                            <span id="lblSaldoTickets" class="monto-num">$0</span>
                         </div>
                     </div>
                 </div>
@@ -134,9 +159,8 @@
                 <!-- TARJETA OBJETIVOS DE AHORRO (SEMANAL Y MENSUAL) -->
                 <div class="card objetivos-card">
                     <h4>Metas de Ahorro "Al Pedo"</h4>
-                    <p class="objetivos-sub">Tope calculado reduciendo 20% tu promedio histórico</p>
+                    <p class="objetivos-sub">Tope calculated reduciendo 20% tu promedio histórico</p>
                     
-                    <!-- META SEMANAL -->
                     <div class="objetivo-box">
                         <div class="objetivo-header">
                             <span>Esta Semana</span>
@@ -148,7 +172,6 @@
                         </div>
                     </div>
 
-                    <!-- META MENSUAL -->
                     <div class="objetivo-box" style="margin-top: 10px;">
                         <div class="objetivo-header">
                             <span>Este Mes</span>
@@ -164,7 +187,7 @@
                     </div>
                 </div>
 
-                <!-- PRESCINDIBLE (CLICKABLE CON BADGE MOVIMIENTOS) -->
+                <!-- PRESCINDIBLE -->
                 <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
                     <div class="card-header-action">
                         <h3>Gastos prescindibles acumulados <span id="cntPrescindibles" class="count-badge"></span></h3>
@@ -179,6 +202,12 @@
                             <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- TOP GASTOS ESPECÍFICOS (POR ÍTEM) -->
+                <div class="card desglose-card">
+                    <h4>Top Ítems / Gastos Específicos</h4>
+                    <div id="listaConceptos"></div>
                 </div>
 
                 <!-- MÉTRICAS BIMONEDA -->
@@ -250,7 +279,7 @@
         <!-- MODAL CLASIFICAR -->
         <div id="modalCategoria" class="modal hidden">
             <div class="modal-content">
-                <h2>Clasificar</h2>
+                2 Clasificar</h2>
                 <p>Categoría para "<span id="conceptoModal"></span>":</p>
                 
                 <select id="selectCategoria"></select>

@@ -1005,3 +1005,113 @@ button:hover {
 .presupuesto-fill.fill-danger {
     background-color: #DC2626; /* Rojo */
 }
+
+/* ==========================================
+   DESGLOSE POR ÍTEM ESPECÍFICO Y SUBDESGLOSE MODAL
+   ========================================== */
+.concepto-subcat {
+    display: block;
+    font-size: 11px;
+    color: var(--subtext);
+    margin-top: 2px;
+}
+
+.subdesglose-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.subdesglose-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
+}
+
+.subdesglose-row:last-child {
+    border-bottom: none;
+}
+
+.subdesglose-row span {
+    color: var(--text);
+    font-weight: 500;
+}
+
+.subdesglose-row strong {
+    color: var(--text);
+}
+
+/* ==========================================
+   MEDIO DE PAGO TOGGLE Y SALDO TICKETS
+   ========================================== */
+.payment-toggle {
+    display: flex;
+    background: var(--badge-bg);
+    border-radius: 12px;
+    padding: 4px;
+    position: relative;
+    margin-bottom: 8px;
+}
+
+.payment-toggle input[type="radio"] {
+    display: none;
+}
+
+.payment-toggle label {
+    flex: 1;
+    text-align: center;
+    padding: 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--subtext);
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+
+.payment-toggle input[type="radio"]:checked + label {
+    color: var(--text);
+}
+
+.toggle-slider-pago {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 1;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider-pago {
+    transform: translateX(100%);
+}
+
+.tickets-status-msg {
+    font-size: 12px;
+    color: var(--danger-text);
+    font-weight: 500;
+    display: block;
+    margin-top: 4px;
+}
+
+.tickets-card {
+    background: #FFFBEB;
+    border: 1px solid #FCD34D;
+}
+
+.tickets-card h3 {
+    color: #92400E;
+}
+
+.tickets-card .badge {
+    background: #FEF3C7;
+    color: #92400E;
+}
