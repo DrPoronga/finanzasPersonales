@@ -258,7 +258,7 @@ def obtener_metricas():
         ingresos_filtrado_usd, gastos_filtrado_usd, prescindible_filtrado_usd = 0.0, 0.0, 0.0
         ingresos_filtrado_uyu, gastos_filtrado_uyu, prescindible_filtrado_uyu = 0.0, 0.0, 0.0
         
-        # Totales mes anterior (para comparativa)
+        # Totales mes anterior
         ingresos_prev_usd, gastos_prev_usd = 0.0, 0.0
         ingresos_prev_uyu, gastos_prev_uyu = 0.0, 0.0
 
@@ -269,6 +269,7 @@ def obtener_metricas():
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
 
         detalles_filtrados = []
+        fechas_prescindibles = []
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
@@ -277,11 +278,21 @@ def obtener_metricas():
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
             presc = str(r.get('Prescindible', '')).strip().capitalize()
             mes_registro = str(r.get('Mes', '')).strip().upper()
+            fecha_str = str(r.get('Fecha', '')).strip()
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
-            es_no_prescindible = presc in ['No', 'False', '']
+            es_prescindible = presc in ['Sí', 'Si', 'True']
+            es_no_prescindible = not es_prescindible
+
+            # Guardar fechas de gastos prescindibles para el cálculo de Racha
+            if tipo == 'Pasivo' and es_prescindible and fecha_str:
+                try:
+                    dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
+                    fechas_prescindibles.append(dt)
+                except ValueError:
+                    pass
 
             # Banco
             if moneda == 'USD':
@@ -291,7 +302,7 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_acum_uyu += monto
                 else: gastos_acum_uyu += monto
 
-            # Pronóstico
+            # Pronóstico Fijos
             if tipo == 'Pasivo' and es_no_prescindible and mes_registro:
                 if cat not in historial_fijos[moneda]:
                     historial_fijos[moneda][cat] = {}
@@ -300,7 +311,7 @@ def obtener_metricas():
                 if mes_registro == mes_actual_nombre:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
 
-            # Datos mes anterior para comparativa
+            # Comparativa Mes Anterior
             if mes_prev_nombre and mes_registro == mes_prev_nombre:
                 if tipo == 'Activo':
                     if moneda == 'USD': ingresos_prev_usd += monto
@@ -322,22 +333,41 @@ def obtener_metricas():
                     if moneda == 'USD':
                         gastos_filtrado_usd += monto
                         gastos_por_categoria[cat]['USD'] += monto
-                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_usd += monto
+                        if es_prescindible: prescindible_filtrado_usd += monto
                     else:
                         gastos_filtrado_uyu += monto
                         gastos_por_categoria[cat]['UYU'] += monto
-                        if presc in ['Sí', 'Si', 'True']: prescindible_filtrado_uyu += monto
+                        if es_prescindible: prescindible_filtrado_uyu += monto
 
                 detalles_filtrados.append({
-                    "fecha": str(r.get('Fecha', '')).strip(),
+                    "fecha": fecha_str,
                     "hora": str(r.get('Hora', '')).strip(),
                     "concepto": str(r.get('Concepto', '')).strip(),
                     "monto": monto,
                     "moneda": moneda,
                     "categoria": cat,
                     "tipo": tipo,
-                    "prescindible": presc in ['Sí', 'Si', 'True']
+                    "prescindible": es_prescindible
                 })
+
+        # CÁLCULO DE RACHA (DÍAS INVICTO)
+        hoy_date = ahora.date()
+        if not fechas_prescindibles:
+            racha_dias = 30
+        else:
+            ultima_fecha_p = max(fechas_prescindibles)
+            if ultima_fecha_p == hoy_date:
+                racha_dias = 0
+            else:
+                racha_dias = (hoy_date - ultima_fecha_p).days
+
+        # PROYECCIÓN DE AHORRO ANUAL (si se elimina lo prescindible del mes)
+        proyeccion_anual_uyu = prescindible_filtrado_uyu * 12
+        proyeccion_anual_usd = prescindible_filtrado_usd * 12
+
+        # LÍMITE RECOMENDADO DE GASTOS PRESCINDIBLES (Ejemplo: Meta máx 15% de ingresos o $5.000 UYU)
+        limite_prescindible_uyu = max(4000.0, ingresos_filtrado_uyu * 0.15) if ingresos_filtrado_uyu > 0 else 5000.0
+        pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / limite_prescindible_uyu * 100)) if limite_prescindible_uyu > 0 else 0.0
 
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
@@ -376,7 +406,6 @@ def obtener_metricas():
         tasa_ahorro_usd = ((ingresos_filtrado_usd - gastos_filtrado_usd) / ingresos_filtrado_usd * 100) if ingresos_filtrado_usd > 0 else 0.0
         tasa_ahorro_uyu = ((ingresos_filtrado_uyu - gastos_filtrado_uyu) / ingresos_filtrado_uyu * 100) if ingresos_filtrado_uyu > 0 else 0.0
 
-        # Cálculo de comparativas (%)
         def calcular_comparativa(act_uyu, act_usd, prev_uyu, prev_usd):
             tot_act = act_uyu + (act_usd * 40)
             tot_prev = prev_uyu + (prev_usd * 40)
@@ -406,7 +435,6 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
-# === LISTA FIJA DE CONTROL DE VENCIMIENTOS ===
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "PATENTE AUTO", "ANTEL", 
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
@@ -418,14 +446,11 @@ def obtener_metricas():
         ]
 
         detalles_fijos = []
-
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
             nombre_lower = fijo_nombre.lower().strip()
-            monto_pagado_uyu = 0.0
-            monto_pagado_usd = 0.0
+            monto_pagado_uyu, monto_pagado_usd = 0.0, 0.0
             fue_pagado = False
             
-            # Buscar si existe alguna transacción de este gasto en el mes seleccionado
             for r in registros:
                 tipo_r = str(r.get('Tipo', '')).strip().capitalize()
                 concepto_r = str(r.get('Concepto', '')).lower().strip()
@@ -438,10 +463,8 @@ def obtener_metricas():
                 if tipo_r == 'Pasivo' and es_mes_valido:
                     if nombre_lower in concepto_r or concepto_r in nombre_lower:
                         fue_pagado = True
-                        if moneda_r == 'USD':
-                            monto_pagado_usd += monto_r
-                        else:
-                            monto_pagado_uyu += monto_r
+                        if moneda_r == 'USD': monto_pagado_usd += monto_r
+                        else: monto_pagado_uyu += monto_r
 
             es_usd = "DOLARES" in fijo_nombre
             moneda_fijo = "USD" if es_usd else "UYU"
@@ -454,13 +477,16 @@ def obtener_metricas():
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
 
-        # Ordenar: Primero los Pendientes de pago, luego los Pagados
         detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
 
         return jsonify({
             "status": "success",
             "mes_actual": mes_solicitado,
             "meses_disponibles": meses_ordenados,
+            "racha_dias": racha_dias,
+            "proyeccion_anual_uyu": f"${proyeccion_anual_uyu:,.0f}",
+            "proyeccion_anual_usd": f"US${proyeccion_anual_usd:,.2f}",
+            "pct_prescindible_utilizado": round(pct_prescindible_utilizado, 1),
             "disponible_hoy_uyu": f"${disponible_hoy_uyu:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
             "disponible_hoy_usd": f"US${disponible_hoy_usd:,.2f}" if mes_solicitado == mes_actual_nombre else "-",
             "balance_uyu": f"${balance_real_uyu:,.0f}",
@@ -488,5 +514,6 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
+        
 if __name__ == '__main__':
     app.run(debug=True)
