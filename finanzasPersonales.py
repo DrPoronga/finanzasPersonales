@@ -297,7 +297,12 @@ def obtener_metricas():
             presc = str(r.get('Prescindible', '')).strip().capitalize()
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
-            medio_pago = str(r.get('Medio de Pago', 'Banco')).strip().capitalize() if r.get('Medio de Pago') else 'Banco'
+
+            # LECTURA COMPATIBLE DE LA COLUMNA (Busca 'Cuenta' o 'Medio de Pago')
+            medio_pago_raw = r.get('Cuenta') or r.get('Medio de Pago') or 'Banco'
+            medio_pago = str(medio_pago_raw).strip().capitalize()
+            if medio_pago not in ['Banco', 'Tickets']:
+                medio_pago = 'Banco'
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
@@ -579,6 +584,6 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-     
+        
 if __name__ == '__main__':
     app.run(debug=True)
