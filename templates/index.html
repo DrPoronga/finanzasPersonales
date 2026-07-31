@@ -81,6 +81,7 @@
             </section>
 
            <!-- VISTA MÉTRICAS -->
+           <!-- VISTA MÉTRICAS -->
             <section id="vistaMetricas" class="hidden">
                 
                 <!-- FILTRO DE MESES -->
@@ -130,10 +131,43 @@
                     </div>
                 </div>
 
-                <!-- PRESCINDIBLE + BARRA DE PRESUPUESTO -->
+                <!-- TARJETA OBJETIVOS DE AHORRO (SEMANAL Y MENSUAL) -->
+                <div class="card objetivos-card">
+                    <h4>Metas de Ahorro "Al Pedo"</h4>
+                    <p class="objetivos-sub">Tope calculado reduciendo 20% tu promedio histórico</p>
+                    
+                    <!-- META SEMANAL -->
+                    <div class="objetivo-box">
+                        <div class="objetivo-header">
+                            <span>Esta Semana</span>
+                            <strong id="lblMetaSemanal">$0 meta</strong>
+                        </div>
+                        <div class="objetivo-body">
+                            <span>Gastado: <strong id="lblGastadoSemana">$0</strong></span>
+                            <span id="lblDispSemanaContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleSemana">$0</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- META MENSUAL -->
+                    <div class="objetivo-box" style="margin-top: 10px;">
+                        <div class="objetivo-header">
+                            <span>Este Mes</span>
+                            <strong id="lblMetaMensual">$0 meta</strong>
+                        </div>
+                        <div class="objetivo-body">
+                            <span>Gastado: <strong id="lblGastadoMes">$0</strong></span>
+                            <span id="lblDispMesContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleMes">$0</strong></span>
+                        </div>
+                        <div class="presupuesto-track" style="margin-top: 8px;">
+                            <div id="barPrescindibleFill" class="presupuesto-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PRESCINDIBLE (CLICKABLE CON BADGE MOVIMIENTOS) -->
                 <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
                     <div class="card-header-action">
-                        <h3>Gastos prescindibles <span id="cntPrescindibles" class="count-badge"></span></h3>
+                        <h3>Gastos prescindibles acumulados <span id="cntPrescindibles" class="count-badge"></span></h3>
                     </div>
                     <div class="monto-group">
                         <div class="monto-row">
@@ -144,27 +178,6 @@
                             <span class="badge">USD</span>
                             <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
                         </div>
-                    </div>
-                    
-                    <!-- BARRA DE PRESUPUESTO PRESCINDIBLE -->
-                    <div class="presupuesto-bar-container">
-                        <div class="presupuesto-info">
-                            <span>Consumo del permitido</span>
-                            <strong id="lblPctPrescindible">0%</strong>
-                        </div>
-                        <div class="presupuesto-track">
-                            <div id="barPrescindibleFill" class="presupuesto-fill" style="width: 0%;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PROYECCIÓN DE IMPACTO EN AHORRO -->
-                <div class="card proyeccion-card">
-                    <h4>Impacto Anual de tus Gastos "Al Pedo"</h4>
-                    <p class="proyeccion-text">Si eliminaras tus prescindibles de este mes, ahorrarías:</p>
-                    <div class="monto-group-compact" style="margin-top: 8px;">
-                        <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblProyeccionUYU" class="val">$0 / año</span></div>
-                        <div class="monto-row-compact"><span class="badge">USD</span><span id="lblProyeccionUSD" class="val">US$0 / año</span></div>
                     </div>
                 </div>
 

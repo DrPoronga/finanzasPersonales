@@ -242,7 +242,6 @@ def obtener_metricas():
         mes_actual_nombre = MESES[ahora.month]
         mes_solicitado = request.args.get('mes', mes_actual_nombre).upper().strip()
 
-        # Determinación del mes anterior para comparativa
         MESES_INV = {v: k for k, v in MESES.items()}
         mes_prev_nombre = None
         if mes_solicitado in MESES_INV:
@@ -268,8 +267,17 @@ def obtener_metricas():
         historial_fijos = {'USD': {}, 'UYU': {}}
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
 
+        # Estructura para promedio histórico de prescindibles por mes
+        prescindibles_historicos_uyu = {}
+        prescindibles_historicos_usd = {}
+
         detalles_filtrados = []
         fechas_prescindibles = []
+        
+        # Gastos prescindibles de la semana actual del mes
+        gastado_semana_actual_uyu = 0.0
+        gastado_semana_actual_usd = 0.0
+        inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
@@ -286,11 +294,23 @@ def obtener_metricas():
             es_prescindible = presc in ['Sí', 'Si', 'True']
             es_no_prescindible = not es_prescindible
 
-            # Guardar fechas de gastos prescindibles para el cálculo de Racha
+            # Acumular prescindibles por mes para el promedio histórico
+            if tipo == 'Pasivo' and es_prescindible and mes_registro:
+                if moneda == 'USD':
+                    prescindibles_historicos_usd[mes_registro] = prescindibles_historicos_usd.get(mes_registro, 0.0) + monto
+                else:
+                    prescindibles_historicos_uyu[mes_registro] = prescindibles_historicos_uyu.get(mes_registro, 0.0) + monto
+
+            # Guardar fechas de prescindibles para la Racha
             if tipo == 'Pasivo' and es_prescindible and fecha_str:
                 try:
                     dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                     fechas_prescindibles.append(dt)
+
+                    # Calcular cuánto se gastó en prescindibles esta semana
+                    if dt >= inicio_semana_actual:
+                        if moneda == 'USD': gastado_semana_actual_usd += monto
+                        else: gastado_semana_actual_uyu += monto
                 except ValueError:
                     pass
 
@@ -350,6 +370,22 @@ def obtener_metricas():
                     "prescindible": es_prescindible
                 })
 
+        # CÁLCULO DE PROMEDIO HISTÓRICO DE PRESCINDIBLES
+        cant_meses_hist = max(1, len(prescindibles_historicos_uyu))
+        promedio_prescindible_uyu = sum(prescindibles_historicos_uyu.values()) / cant_meses_hist if prescindibles_historicos_uyu else prescindible_filtrado_uyu
+        if promedio_prescindible_uyu <= 0: promedio_prescindible_uyu = 4000.0  # Base por defecto si está vacío
+
+        # OBJETIVO MENSUAL (Reducir 20% respecto al promedio histórico)
+        meta_mensual_prescindible_uyu = promedio_prescindible_uyu * 0.80
+        disponible_meta_mensual_uyu = meta_mensual_prescindible_uyu - prescindible_filtrado_uyu
+
+        # OBJETIVO SEMANAL (Tope mensual dividido en 4 semanas)
+        meta_semanal_prescindible_uyu = meta_mensual_prescindible_uyu / 4.0
+        disponible_meta_semanal_uyu = meta_semanal_prescindible_uyu - gastado_semana_actual_uyu
+
+        # Porcentaje de la meta consumida este mes
+        pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / meta_mensual_prescindible_uyu * 100)) if meta_mensual_prescindible_uyu > 0 else 0.0
+
         # CÁLCULO DE RACHA (DÍAS INVICTO)
         hoy_date = ahora.date()
         if not fechas_prescindibles:
@@ -360,14 +396,6 @@ def obtener_metricas():
                 racha_dias = 0
             else:
                 racha_dias = (hoy_date - ultima_fecha_p).days
-
-        # PROYECCIÓN DE AHORRO ANUAL (si se elimina lo prescindible del mes)
-        proyeccion_anual_uyu = prescindible_filtrado_uyu * 12
-        proyeccion_anual_usd = prescindible_filtrado_usd * 12
-
-        # LÍMITE RECOMENDADO DE GASTOS PRESCINDIBLES (Ejemplo: Meta máx 15% de ingresos o $5.000 UYU)
-        limite_prescindible_uyu = max(4000.0, ingresos_filtrado_uyu * 0.15) if ingresos_filtrado_uyu > 0 else 5000.0
-        pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / limite_prescindible_uyu * 100)) if limite_prescindible_uyu > 0 else 0.0
 
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
@@ -484,8 +512,12 @@ def obtener_metricas():
             "mes_actual": mes_solicitado,
             "meses_disponibles": meses_ordenados,
             "racha_dias": racha_dias,
-            "proyeccion_anual_uyu": f"${proyeccion_anual_uyu:,.0f}",
-            "proyeccion_anual_usd": f"US${proyeccion_anual_usd:,.2f}",
+            "meta_semanal_uyu": f"${meta_semanal_prescindible_uyu:,.0f}",
+            "gastado_semana_uyu": f"${gastado_semana_actual_uyu:,.0f}",
+            "disponible_semana_uyu": f"${disponible_meta_semanal_uyu:,.0f}",
+            "meta_mensual_uyu": f"${meta_mensual_prescindible_uyu:,.0f}",
+            "gastado_mes_uyu": f"${prescindible_filtrado_uyu:,.0f}",
+            "disponible_mes_uyu": f"${disponible_meta_mensual_uyu:,.0f}",
             "pct_prescindible_utilizado": round(pct_prescindible_utilizado, 1),
             "disponible_hoy_uyu": f"${disponible_hoy_uyu:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
             "disponible_hoy_usd": f"US${disponible_hoy_usd:,.2f}" if mes_solicitado == mes_actual_nombre else "-",

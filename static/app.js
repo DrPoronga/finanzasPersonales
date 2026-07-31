@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-   async function cargarMetricas(mesSeleccionado = '') {
+async function cargarMetricas(mesSeleccionado = '') {
     try {
         const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
         const res = await fetch(url);
@@ -202,16 +202,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
             }
 
-            // GAMIFICACIÓN: BARRA DE PRESUPUESTO PRESCINDIBLE
+            // GAMIFICACIÓN: OBJETIVOS SEMANAL Y MENSUAL
+            document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
+            document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
+            document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
+
+            document.getElementById('lblMetaMensual').textContent = `Meta: ${data.meta_mensual_uyu}`;
+            document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
+            document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
+
+            // BARRA DE PROGRESO MENSUAL
             const pctUtilizado = data.pct_prescindible_utilizado || 0;
-            const lblPct = document.getElementById('lblPctPrescindible');
             const fillBar = document.getElementById('barPrescindibleFill');
             
-            if (lblPct && fillBar) {
-                lblPct.textContent = `${pctUtilizado}%`;
+            if (fillBar) {
                 fillBar.style.width = `${pctUtilizado}%`;
-
-                // Colores dinámicos según nivel de consumo
                 fillBar.classList.remove('fill-warning', 'fill-danger');
                 if (pctUtilizado > 85) {
                     fillBar.classList.add('fill-danger');
@@ -219,12 +224,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     fillBar.classList.add('fill-warning');
                 }
             }
-
-            // GAMIFICACIÓN: PROYECCIÓN ANUAL
-            const lblProyUYU = document.getElementById('lblProyeccionUYU');
-            const lblProyUSD = document.getElementById('lblProyeccionUSD');
-            if (lblProyUYU) lblProyUYU.textContent = `${data.proyeccion_anual_uyu} / año`;
-            if (lblProyUSD) lblProyUSD.textContent = `${data.proyeccion_anual_usd} / año`;
 
             // === CONTROL DE VENCIMIENTOS (GASTOS FIJOS) ===
             const listaFijos = document.getElementById('listaFijos');
