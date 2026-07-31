@@ -60,6 +60,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     checkAutenticacion();
 	
+	// Normalización de comas y formateo automático de decimales (.00)
+	montoInput.addEventListener('input', () => {
+		// Reemplaza comas por puntos automáticamente mientras escribes
+		montoInput.value = montoInput.value.replace(',', '.');
+	});
+
+	montoInput.addEventListener('blur', () => {
+		let val = montoInput.value.trim();
+		if (val !== '' && !isNaN(val)) {
+			// Al salir del input, fija siempre 2 decimales (ej: 118 -> 118.00 | 118.16 -> 118.16)
+			montoInput.value = parseFloat(val).toFixed(2);
+		}
+	});
+
 	// LOGICA DEL SELECTOR DE MONEDA (TOGGLE)
 	const radioUYU = document.getElementById('monedaUYU');
 	const radioUSD = document.getElementById('monedaUSD');
@@ -476,7 +490,8 @@ document.addEventListener("DOMContentLoaded", () => {
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
-        const monto = parseFloat(montoInput.value);
+        const valorLimpio = montoInput.value.replace(',', '.').trim();
+		const monto = parseFloat(valorLimpio);
         const moneda = selectMoneda.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
 
