@@ -260,24 +260,26 @@ def es_pasivo(tipo):
 def coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
     c = str(concepto_r or '').lower().strip()
     f = str(fijo_nombre or '').upper().strip()
-    m = normalizar_moneda(moneda_r)
     
-    # Verificar moneda requerida según el nombre del gasto fijo
-    moneda_requerida = 'USD' if 'DOLARES' in f else 'UYU'
-    if m != moneda_requerida:
+    # 1. CAMILA VISA: Exige "camila" Y "visa" para ignorar "Café Camila" o "Chupetines camila"
+    if f == "CAMILA VISA":
+        return "camila" in c and "visa" in c
+
+    # 2. Distinción de Pesos vs Dólares en tarjetas (solo si el concepto especifica la moneda)
+    if "PESOS" in f and ("dolar" in c or "usd" in c):
+        return False
+    if "DOLARES" in f and ("peso" in c or "uyu" in c):
         return False
 
-    # Reglas flexibles por palabra clave
+    # 3. Coincidencias por servicio / préstamo
     if f == "UTE":
-        return re.search(r'\bute\b', c) is not None or c == 'ute'
+        return c == 'ute' or re.search(r'\bute\b', c) is not None
     elif f == "OSE":
-        return re.search(r'\bose\b', c) is not None or c == 'ose'
+        return c == 'ose' or re.search(r'\bose\b', c) is not None
     elif f == "ANTEL":
         return "antel" in c
     elif f == "PATENTE AUTO":
         return "patente" in c
-    elif f == "CAMILA VISA":
-        return "camila" in c
     elif f == "JIU-JITSU":
         return "jiu" in c or "jitsu" in c
     elif f == "CHACRA CUOTA":
@@ -297,10 +299,7 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
     elif "OCA" in f:
         return "oca" in c and "prestamo" not in c
     
-    # Fallback para otros conceptos
-    palabras_fijo = [p for p in f.lower().split() if p not in ['tarjeta', 'pesos', 'dolares', 'prestamo']]
-    return any(p in c for p in palabras_fijo if len(p) > 2)
-
+    return False
 
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
