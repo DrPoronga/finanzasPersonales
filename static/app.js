@@ -174,8 +174,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 	
 	window.editarSaldo = async function(medioPago, moneda) {
-		let saldoActual = 0;
+		// 1. Forzamos actualización de métricas para no usar saldos viejos en caché
+		await cargarMetricas(selectMesFiltro.value, true);
 
+		let saldoActual = 0;
 		if (medioPago === 'Tickets') {
 			saldoActual = saldoTicketsDisponibleNum || 0;
 		} else if (moneda === 'USD') {
@@ -184,18 +186,19 @@ document.addEventListener("DOMContentLoaded", () => {
 			saldoActual = balanceUYUNum || 0;
 		}
 
-		const promptMsg = `Ingrese el nuevo saldo real para ${medioPago} (${moneda}):\n(Saldo actual registrado: ${saldoActual.toFixed(2)})`;
+		const simbolo = moneda === 'USD' ? 'US$' : '$';
+		const promptMsg = `ATENCIÓN: Estás ajustando la cuenta en ${moneda} (${medioPago}).\n\n` +
+						  `Saldo actual detectado: ${simbolo}${saldoActual.toFixed(2)}\n` +
+						  `Ingrese el nuevo saldo REAL TOTAL que tienes en el banco:`;
+
 		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
 		if (nuevoSaldoStr === null) return;
 
-		// Normalización inteligente de comas y puntos
 		let valorLimpio = nuevoSaldoStr.trim();
 		if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
 			if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
-				// Formato 1.250,50
 				valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
 			} else {
-				// Formato 1,250.50
 				valorLimpio = valorLimpio.replace(/,/g, '');
 			}
 		} else if (valorLimpio.includes(',')) {
@@ -217,9 +220,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
 		const montoAjuste = Math.abs(diferencia);
 
-		// Cartel de confirmación previo para evitar sustos
 		const confirmar = confirm(
-			`Se creará un ${tipoAjuste} por $${montoAjuste.toFixed(2)} ${moneda} para ajustar el saldo de $${saldoActual.toFixed(2)} a $${nuevoSaldo.toFixed(2)}.\n\n¿Deseas guardar el ajuste?`
+			`CONFIRMACIÓN DE AJUSTE (${moneda}):\n\n` +
+			`• Saldo Anterior: ${simbolo}${saldoActual.toFixed(2)}\n` +
+			`• Nuevo Saldo: ${simbolo}${nuevoSaldo.toFixed(2)}\n` +
+			`• Movimiento a crear: ${tipoAjuste} por ${simbolo}${montoAjuste.toFixed(2)}\n\n` +
+			`¿Confirmas este ajuste?`
 		);
 		if (!confirmar) return;
 
@@ -251,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			alert("Error de conexión al ajustar saldo.");
 		}
 	};
-	
+
 	let conceptosCache = { pasivos: [], activos: [] };
 
 	async function cargarConceptos() {
