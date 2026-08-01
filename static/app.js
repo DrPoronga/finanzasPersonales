@@ -286,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	function desbloquearApp() {
         pantallaPin.classList.add('hidden');
         contenidoApp.classList.remove('hidden');
+		cargarConceptos();
     }
 
     function bloquearApp() {

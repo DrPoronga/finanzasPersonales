@@ -1,3 +1,6 @@
+/* ==========================================
+   1. VARIABLES Y ESTILOS BASE
+   ========================================== */
 :root {
     --primary: #171717;
     --primary-hover: #333333;
@@ -27,24 +30,36 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+.container {
+    width: 100%;
+    max-width: 420px;
+    padding: 70px 18px 40px 18px;
+    box-sizing: border-box;
+}
+
+.hidden { display: none !important; }
+
 /* ==========================================
-   CORRECCIÓN BOTÓN MENÚ HAMBURGUESA ARRIBA A LA IZQUIERDA
+   2. NAVEGACIÓN Y MENÚ HAMBURGUESA
    ========================================== */
 .navbar {
     position: fixed !important;
     top: 18px !important;
     left: 18px !important;
     right: auto !important;
-    width: auto !important;
+    width: calc(100% - 40px) !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
     z-index: 1100 !important;
     background: transparent !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .hamburger-btn {
-    width: auto !important; /* Evita que ocupe el 100% del ancho */
+    width: auto !important;
     height: auto !important;
     padding: 6px 10px !important;
     margin: 0 !important;
@@ -71,9 +86,7 @@ body {
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.side-menu.hidden {
-    transform: translateX(-100%);
-}
+.side-menu.hidden { transform: translateX(-100%); }
 
 .close-btn {
     background: none;
@@ -115,13 +128,9 @@ body {
     z-index: 999;
 }
 
-.container {
-    width: 100%;
-    max-width: 420px;
-    padding: 70px 18px 40px 18px;
-    box-sizing: border-box;
-}
-
+/* ==========================================
+   3. FORMULARIO E INPUTS GENERALES
+   ========================================== */
 .form-group {
     margin-bottom: 20px;
 }
@@ -155,9 +164,7 @@ button {
     transition: background-color 0.2s;
 }
 
-button:hover {
-    background-color: var(--primary-hover);
-}
+button:hover { background-color: var(--primary-hover); }
 
 .btn-secondary {
     background-color: transparent;
@@ -167,11 +174,26 @@ button:hover {
     font-size: 15px;
 }
 
-.btn-secondary:hover {
-    background-color: var(--bg);
+.btn-secondary:hover { background-color: var(--bg); }
+
+.checkbox-group { margin-bottom: 20px; }
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--subtext);
+    user-select: none;
 }
 
-.hidden { display: none !important; }
+.checkbox-label input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
 
 #mensaje {
     margin-top: 20px;
@@ -183,7 +205,72 @@ button:hover {
 .success { background-color: var(--primary); color: white; }
 .error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
-/* SECCIÓN MÉTRICAS Y TARJETAS */
+/* ==========================================
+   4. SELECTORES DE TOGGLE (MONEDA Y CUENTA)
+   ========================================== */
+.currency-toggle, .payment-toggle {
+    display: flex;
+    background: var(--badge-bg);
+    border-radius: 12px;
+    padding: 4px;
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.payment-toggle { margin-bottom: 8px; }
+
+.currency-toggle input[type="radio"], 
+.payment-toggle input[type="radio"] { display: none; }
+
+.currency-toggle label, 
+.payment-toggle label {
+    flex: 1;
+    text-align: center;
+    padding: 14px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--subtext);
+    cursor: pointer;
+    z-index: 2;
+    transition: color 0.2s ease;
+}
+
+.payment-toggle label { padding: 12px 0; font-size: 14px; }
+
+.currency-toggle input[type="radio"]:checked + label,
+.payment-toggle input[type="radio"]:checked + label {
+    color: var(--text);
+}
+
+.toggle-slider, .toggle-slider-pago {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 4px;
+    width: calc(50% - 4px);
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 1;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider,
+.payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider-pago {
+    transform: translateX(100%);
+}
+
+.tickets-status-msg {
+    font-size: 12px;
+    color: var(--danger-text);
+    font-weight: 500;
+    display: block;
+    margin-top: 4px;
+}
+
+/* ==========================================
+   5. TARJETAS Y SISTEMA DE MÉTRICAS
+   ========================================== */
 .filtro-mes-group select {
     font-weight: 600;
     text-align: left;
@@ -208,48 +295,6 @@ button:hover {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.6px;
-}
-
-/* ==========================================
-   TARJETAS INTERACTIVAS (ESTILO BOTÓN 3D)
-   ========================================== */
-.card-interactive {
-    cursor: pointer;
-    border: 1px solid var(--border) !important;
-    box-shadow: 0 3.5px 0 0 var(--border) !important; 
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
-    user-select: none;
-    position: relative;
-}
-
-/* Indicador gris sutil por defecto */
-.card-interactive h3::after, 
-.card-interactive h4::after {
-    content: " ›";
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--subtext);
-    margin-left: 4px;
-    display: inline-block;
-    transition: transform 0.15s ease, color 0.15s ease;
-}
-
-/* Al interactuar: se activan en NEGRO */
-.card-interactive:hover {
-    border-color: #171717 !important;
-    box-shadow: 0 3.5px 0 0 #171717 !important;
-}
-
-.card-interactive:hover h3::after,
-.card-interactive:hover h4::after {
-    color: var(--text);
-    transform: translateX(3px);
-}
-
-/* Efecto 3D de hundimiento al presionar */
-.card-interactive:active {
-    transform: translateY(3.5px);
-    box-shadow: 0 0 0 0 transparent !important;
 }
 
 .monto-group {
@@ -295,18 +340,21 @@ button:hover {
     color: white;
     border: none;
 }
-
-.disponible-card h3 {
-    color: #A3A3A3;
-}
-
-.disponible-card .monto-num {
-    color: white;
-}
-
+.disponible-card h3 { color: #A3A3A3; }
+.disponible-card .monto-num { color: white; }
 .disponible-card .badge {
     background: rgba(255, 255, 255, 0.15);
     color: #FFFFFF;
+}
+
+.tickets-card {
+    background: #FFFBEB;
+    border: 1px solid #FCD34D;
+}
+.tickets-card h3 { color: #92400E; }
+.tickets-card .badge {
+    background: #FEF3C7;
+    color: #92400E;
 }
 
 .metricas-grid {
@@ -339,14 +387,157 @@ button:hover {
     color: var(--text);
 }
 
-.desglose-card h4 {
-    margin-bottom: 15px;
+.count-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--subtext);
+    background: var(--badge-bg);
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 4px;
+    border: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.comparativa-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--subtext);
+    margin-top: 8px;
+    display: block;
+    letter-spacing: -0.2px;
+}
+
+/* TARJETAS INTERACTIVAS (Efecto 3D) */
+.card-interactive {
+    cursor: pointer;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 3.5px 0 0 var(--border) !important; 
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
+    user-select: none;
+    position: relative;
+}
+
+.card-interactive h3::after, 
+.card-interactive h4::after {
+    content: " ›";
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--subtext);
+    margin-left: 2px;
+    display: inline-block;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.card-interactive:hover {
+    border-color: #171717 !important;
+    box-shadow: 0 3.5px 0 0 #171717 !important;
+}
+
+.card-interactive:hover h3::after,
+.card-interactive:hover h4::after {
+    color: var(--text);
+    transform: translateX(3px);
+}
+
+.card-interactive:active {
+    transform: translateY(3.5px);
+    box-shadow: 0 0 0 0 transparent !important;
 }
 
 /* ==========================================
-   DESGLOSE POR CATEGORÍA (BOTONES INDIVIDUALES)
+   6. GAMIFICACIÓN Y OBJETIVOS DE AHORRO
    ========================================== */
+.card-racha {
+    background: linear-gradient(135deg, #171717 0%, #262626 100%);
+    color: white;
+    padding: 16px 20px;
+}
+
+.racha-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.racha-icon { font-size: 38px; line-height: 1; }
+
+.racha-text h3 { margin: 0; color: #A3A3A3; font-size: 11px; }
+
+.racha-count {
+    font-size: 24px;
+    font-weight: 800;
+    color: #FFFFFF;
+    display: block;
+    letter-spacing: -0.5px;
+}
+
+.racha-sub { margin: 2px 0 0 0; font-size: 12px; color: #D4D4D8; }
+
+.objetivos-sub {
+    font-size: 11px;
+    color: var(--subtext);
+    margin: 0 0 12px 0;
+}
+
+.objetivo-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.objetivo-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.objetivo-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--subtext);
+}
+
+.objetivo-body strong { color: var(--text); }
+
+.disp-tag {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.presupuesto-track {
+    width: 100%;
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.presupuesto-fill {
+    height: 100%;
+    background-color: #16A34A;
+    transition: width 0.5s ease, background-color 0.3s ease;
+    border-radius: 3px;
+}
+
+.presupuesto-fill.fill-warning { background-color: #EAB308; }
+.presupuesto-fill.fill-danger { background-color: #DC2626; }
+
+/* ==========================================
+   7. LISTAS, DESGLOSES Y GASTOS FIJOS
+   ========================================== */
+.desglose-card h4 { margin-bottom: 15px; }
+
 .desglose-item {
+    position: relative;
+    overflow: hidden;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -357,7 +548,6 @@ button:hover {
     background-color: var(--surface);
     font-size: 15px;
     cursor: pointer;
-    /* Relieve 3D fino */
     box-shadow: 0 2.5px 0 0 var(--border);
     transition: all 0.12s ease;
 }
@@ -368,13 +558,11 @@ button:hover {
     background-color: var(--bg);
 }
 
-/* Hundimiento táctil al tocar/cliquear */
 .desglose-item:active {
     transform: translateY(2.5px);
     box-shadow: 0 0 0 0 #171717;
 }
 
-/* Indicador gráfico sutil al final de la fila */
 .desglose-item::after {
     content: "›";
     font-size: 18px;
@@ -389,9 +577,7 @@ button:hover {
     transform: translateX(2px);
 }
 
-.desglose-nombre {
-    font-weight: 500;
-}
+.desglose-nombre { font-weight: 500; }
 
 .desglose-valores {
     text-align: right;
@@ -400,12 +586,89 @@ button:hover {
     gap: 2px;
 }
 
-.desglose-monto {
-    font-weight: 600;
-    font-size: 14px;
+.desglose-monto { font-weight: 600; font-size: 14px; }
+
+.desglose-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background-color: #171717;
+    border-radius: 0 2px 2px 0;
+    transition: width 0.3s ease;
 }
 
-/* MODALES */
+.concepto-subcat {
+    display: block;
+    font-size: 11px;
+    color: var(--subtext);
+    margin-top: 2px;
+}
+
+/* TARJETAS DE GASTOS FIJOS */
+.fijo-item {
+    padding: 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background-color: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fijo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fijo-nombre { font-weight: 600; font-size: 15px; }
+
+.badge-fijo {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.badge-pendiente::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    background-color: #DC2626;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.badge-pendiente {
+    background: #FEF2F2;
+    color: #DC2626;
+    border: 1px solid #FEE2E2;
+}
+
+.badge-pagado {
+    background: #171717;
+    color: #FFFFFF;
+}
+
+.fijo-monto {
+    font-size: 13px;
+    color: var(--subtext);
+    display: flex;
+    justify-content: space-between;
+}
+
+.fijo-monto strong { color: var(--text); }
+
+/* ==========================================
+   8. MODALES Y VENTANAS EMERGENTES
+   ========================================== */
 .modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.4);
@@ -473,10 +736,7 @@ button:hover {
     padding-right: 4px;
 }
 
-.modal-lista::-webkit-scrollbar {
-    width: 4px;
-}
-
+.modal-lista::-webkit-scrollbar { width: 4px; }
 .modal-lista::-webkit-scrollbar-thumb {
     background-color: #D4D4D8;
     border-radius: 4px;
@@ -490,9 +750,7 @@ button:hover {
     border-bottom: 1px solid var(--border);
 }
 
-.detalle-item:last-child {
-    border-bottom: none;
-}
+.detalle-item:last-child { border-bottom: none; }
 
 .detalle-info {
     display: flex;
@@ -520,15 +778,32 @@ button:hover {
     text-align: right;
 }
 
-.detalle-monto.monto-activo {
-    color: var(--success-text);
+.detalle-monto.monto-activo { color: var(--success-text); }
+.detalle-monto.monto-pasivo { color: var(--text); }
+
+.subdesglose-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
 }
 
-.detalle-monto.monto-pasivo {
-    color: var(--text);
+.subdesglose-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 4px 0;
+    border-bottom: 1px dashed var(--border);
 }
 
-/* PIN SCREEN */
+.subdesglose-row:last-child { border-bottom: none; }
+.subdesglose-row span { color: var(--text); font-weight: 500; }
+.subdesglose-row strong { color: var(--text); }
+
+/* ==========================================
+   9. PANTALLA DE PIN DE SEGURIDAD
+   ========================================== */
 .pin-screen {
     position: fixed;
     top: 0; left: 0;
@@ -562,584 +837,9 @@ button:hover {
     margin-bottom: 15px;
 }
 
-.checkbox-group {
-    margin-bottom: 20px;
-}
-
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-size: 15px;
-    color: var(--subtext);
-    user-select: none;
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
-    accent-color: var(--primary);
-    cursor: pointer;
-}
-
 /* ==========================================
-   TARJETAS INTERACTIVAS (ESTILO BOTÓN 3D)
+   10. PULL TO REFRESH Y BOTONES DE EDICIÓN
    ========================================== */
-.card-interactive {
-    cursor: pointer;
-    border: 1px solid var(--border) !important;
-    box-shadow: 0 3.5px 0 0 var(--border) !important; 
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease, background-color 0.12s ease;
-    user-select: none;
-    position: relative;
-}
-
-/* Indicador gris sutil por defecto */
-.card-interactive h3::after, 
-.card-interactive h4::after {
-    content: " ›";
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--subtext);
-    margin-left: 2px;
-    display: inline-block;
-    transition: transform 0.15s ease, color 0.15s ease;
-}
-
-/* Al interactuar: se activan en NEGRO */
-.card-interactive:hover {
-    border-color: #171717 !important;
-    box-shadow: 0 3.5px 0 0 #171717 !important;
-}
-
-.card-interactive:hover h3::after,
-.card-interactive:hover h4::after {
-    color: var(--text);
-    transform: translateX(3px);
-}
-
-/* Efecto 3D de hundimiento al presionar */
-.card-interactive:active {
-    transform: translateY(3.5px);
-    box-shadow: 0 0 0 0 transparent !important;
-}
-
-/* BADGE DE CONTADOR DE MOVIMIENTOS */
-.count-badge {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--subtext);
-    background: var(--badge-bg);
-    padding: 2px 6px;
-    border-radius: 8px;
-    margin-left: 4px;
-    border: 1px solid var(--border);
-    vertical-align: middle;
-}
-
-/* TAG DE COMPARATIVA VS MES ANTERIOR */
-.comparativa-tag {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--subtext);
-    margin-top: 8px;
-    display: block;
-    letter-spacing: -0.2px;
-}
-
-/* ==========================================
-   DESGLOSE POR CATEGORÍA (BOTONES CON BARRA 3D)
-   ========================================== */
-.desglose-item {
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 14px;
-    margin-bottom: 8px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background-color: var(--surface);
-    font-size: 15px;
-    cursor: pointer;
-    box-shadow: 0 2.5px 0 0 var(--border);
-    transition: all 0.12s ease;
-}
-
-.desglose-item:hover {
-    border-color: #171717;
-    box-shadow: 0 2.5px 0 0 #171717;
-    background-color: var(--bg);
-}
-
-.desglose-item:active {
-    transform: translateY(2.5px);
-    box-shadow: 0 0 0 0 #171717;
-}
-
-.desglose-item::after {
-    content: "›";
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--subtext);
-    margin-left: 10px;
-    transition: transform 0.15s ease, color 0.15s ease;
-}
-
-.desglose-item:hover::after {
-    color: var(--text);
-    transform: translateX(2px);
-}
-
-/* BARRA NEGRA FINITA DE PROPORCIÓN DE GASTO */
-.desglose-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    background-color: #171717;
-    border-radius: 0 2px 2px 0;
-    transition: width 0.3s ease;
-}
-
-/* ==========================================
-   SELECTOR DE MONEDA (SEGMENTED TOGGLE)
-   ========================================== */
-.currency-toggle {
-    display: flex;
-    background: var(--badge-bg);
-    border-radius: 12px;
-    padding: 4px;
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.currency-toggle input[type="radio"] {
-    display: none;
-}
-
-.currency-toggle label {
-    flex: 1;
-    text-align: center;
-    padding: 14px 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--subtext);
-    cursor: pointer;
-    z-index: 2;
-    transition: color 0.2s ease;
-}
-
-.currency-toggle input[type="radio"]:checked + label {
-    color: var(--text);
-}
-
-.toggle-slider {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
-    width: calc(50% - 4px);
-    background: var(--surface);
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    z-index: 1;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider {
-    transform: translateX(100%);
-}
-
-/* ==========================================
-   TARJETAS DE GASTOS FIJOS
-   ========================================== */
-.fijo-item {
-    padding: 14px;
-    margin-bottom: 8px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background-color: var(--surface);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.fijo-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.fijo-nombre {
-    font-weight: 600;
-    font-size: 15px;
-}
-
-.badge-fijo {
-    font-size: 9px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 6px;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.badge-pendiente::before {
-    content: "";
-    width: 5px;
-    height: 5px;
-    background-color: #DC2626;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.badge-pendiente {
-    background: #FEF2F2;
-    color: #DC2626;
-    border: 1px solid #FEE2E2;
-}
-
-.badge-pagado {
-    background: #171717;
-    color: #FFFFFF;
-}
-
-.fijo-monto {
-    font-size: 13px;
-    color: var(--subtext);
-    display: flex;
-    justify-content: space-between;
-}
-.fijo-monto strong { color: var(--text); }
-.fijo-bar-bg {
-    width: 100%;
-    height: 4px;
-    background-color: var(--badge-bg);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-top: 2px;
-}
-.fijo-bar-fill {
-    height: 100%;
-    background-color: #171717;
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ==========================================
-   ESTILOS GAMIFICACIÓN (RACHA, BARRAS, PROYECCIÓN)
-   ========================================== */
-.card-racha {
-    background: linear-gradient(135deg, #171717 0%, #262626 100%);
-    color: white;
-    padding: 16px 20px;
-}
-
-.racha-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.racha-icon {
-    font-size: 38px;
-    line-height: 1;
-}
-
-.racha-text h3 {
-    margin: 0;
-    color: #A3A3A3;
-    font-size: 11px;
-}
-
-.racha-count {
-    font-size: 24px;
-    font-weight: 800;
-    color: #FFFFFF;
-    display: block;
-    letter-spacing: -0.5px;
-}
-
-.racha-sub {
-    margin: 2px 0 0 0;
-    font-size: 12px;
-    color: #D4D4D8;
-}
-
-/* BARRA DE PRESUPUESTO PRESCINDIBLE */
-.presupuesto-bar-container {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-}
-
-.presupuesto-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    color: var(--subtext);
-    margin-bottom: 6px;
-}
-
-.presupuesto-track {
-    width: 100%;
-    height: 6px;
-    background: var(--badge-bg);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.presupuesto-fill {
-    height: 100%;
-    background-color: #16A3A3; /* Verde/Azul inicial */
-    transition: width 0.5s ease, background-color 0.3s ease;
-    border-radius: 3px;
-}
-
-.presupuesto-fill.fill-warning {
-    background-color: #EAB308; /* Amarillo */
-}
-
-.presupuesto-fill.fill-danger {
-    background-color: #DC2626; /* Rojo */
-}
-
-/* TARJETA DE PROYECCIÓN */
-.proyeccion-card h4 {
-    margin-bottom: 4px;
-}
-
-.proyeccion-text {
-    font-size: 12px;
-    color: var(--subtext);
-    margin: 0 0 8px 0;
-}
-
-/* ==========================================
-   ESTILOS OBJETIVOS DE AHORRO (SEMANAL/MENSUAL)
-   ========================================== */
-.card-racha {
-    background: linear-gradient(135deg, #171717 0%, #262626 100%);
-    color: white;
-    padding: 16px 20px;
-}
-
-.racha-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.racha-icon {
-    font-size: 38px;
-    line-height: 1;
-}
-
-.racha-text h3 {
-    margin: 0;
-    color: #A3A3A3;
-    font-size: 11px;
-}
-
-.racha-count {
-    font-size: 24px;
-    font-weight: 800;
-    color: #FFFFFF;
-    display: block;
-    letter-spacing: -0.5px;
-}
-
-.racha-sub {
-    margin: 2px 0 0 0;
-    font-size: 12px;
-    color: #D4D4D8;
-}
-
-.objetivos-sub {
-    font-size: 11px;
-    color: var(--subtext);
-    margin: 0 0 12px 0;
-}
-
-.objetivo-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-}
-
-.objetivo-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-.objetivo-body {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-    color: var(--subtext);
-}
-
-.objetivo-body strong {
-    color: var(--text);
-}
-
-.disp-tag {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 3px 8px;
-    border-radius: 6px;
-}
-
-.presupuesto-track {
-    width: 100%;
-    height: 6px;
-    background: var(--border);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.presupuesto-fill {
-    height: 100%;
-    background-color: #16A34A; /* Verde */
-    transition: width 0.5s ease, background-color 0.3s ease;
-}
-
-.presupuesto-fill.fill-warning {
-    background-color: #EAB308; /* Amarillo */
-}
-
-.presupuesto-fill.fill-danger {
-    background-color: #DC2626; /* Rojo */
-}
-
-/* ==========================================
-   DESGLOSE POR ÍTEM ESPECÍFICO Y SUBDESGLOSE MODAL
-   ========================================== */
-.concepto-subcat {
-    display: block;
-    font-size: 11px;
-    color: var(--subtext);
-    margin-top: 2px;
-}
-
-.subdesglose-box {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 16px;
-}
-
-.subdesglose-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 4px 0;
-    border-bottom: 1px dashed var(--border);
-}
-
-.subdesglose-row:last-child {
-    border-bottom: none;
-}
-
-.subdesglose-row span {
-    color: var(--text);
-    font-weight: 500;
-}
-
-.subdesglose-row strong {
-    color: var(--text);
-}
-
-/* ==========================================
-   MEDIO DE PAGO TOGGLE Y SALDO TICKETS
-   ========================================== */
-.payment-toggle {
-    display: flex;
-    background: var(--badge-bg);
-    border-radius: 12px;
-    padding: 4px;
-    position: relative;
-    margin-bottom: 8px;
-}
-
-.payment-toggle input[type="radio"] {
-    display: none;
-}
-
-.payment-toggle label {
-    flex: 1;
-    text-align: center;
-    padding: 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--subtext);
-    cursor: pointer;
-    z-index: 2;
-    transition: color 0.2s ease;
-}
-
-.payment-toggle input[type="radio"]:checked + label {
-    color: var(--text);
-}
-
-.toggle-slider-pago {
-    position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
-    width: calc(50% - 4px);
-    background: var(--surface);
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    z-index: 1;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider-pago {
-    transform: translateX(100%);
-}
-
-.tickets-status-msg {
-    font-size: 12px;
-    color: var(--danger-text);
-    font-weight: 500;
-    display: block;
-    margin-top: 4px;
-}
-
-.tickets-card {
-    background: #FFFBEB;
-    border: 1px solid #FCD34D;
-}
-
-.tickets-card h3 {
-    color: #92400E;
-}
-
-.tickets-card .badge {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-/* ==========================================
-   NUEVO: BOTÓN DE REFRESCO Y PULL TO REFRESH
-   ========================================== */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: calc(100% - 40px);
-}
-
 .refresh-btn {
     background: none;
     border: none;
@@ -1150,9 +850,7 @@ button:hover {
     width: auto;
 }
 
-.rotating {
-    animation: spin 0.8s linear infinite;
-}
+.rotating { animation: spin 0.8s linear infinite; }
 
 @keyframes spin {
     from { transform: rotate(0deg); }
@@ -1178,9 +876,8 @@ button:hover {
     transition: top 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     pointer-events: none;
 }
-.ptr-indicator.visible {
-    top: 20px;
-}
+
+.ptr-indicator.visible { top: 20px; }
 
 .spinner {
     width: 12px;
