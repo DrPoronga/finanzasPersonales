@@ -16,14 +16,14 @@ app = Flask(__name__)
 # ==========================================
 secret_key = os.environ.get('SECRET_KEY')
 if not secret_key:
-    secret_key = os.urandom(24).hex()
+    secret_key = 'clave_secreta_fija_mi_app_finanzas'
 app.secret_key = secret_key
 
 app.permanent_session_lifetime = timedelta(days=31)
 
 pin_env = os.environ.get('APP_PIN')
 if not pin_env:
-    pin_env = '4372736'
+    pin_env = '437273'
 PIN_CORRECTO = str(pin_env).strip()
 
 MESES = {
