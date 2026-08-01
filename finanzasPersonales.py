@@ -283,7 +283,6 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
 @requiere_pin
 def obtener_metricas():
     try:
-        # Permite forzar la invalidación del caché al hacer Pull to Refresh
         force_reload = request.args.get('force', 'false').lower() == 'true'
         if force_reload:
             invalidar_cache()
@@ -301,11 +300,9 @@ def obtener_metricas():
             num_mes_prev = 12 if num_mes == 1 else num_mes - 1
             mes_prev_nombre = MESES[num_mes_prev]
 
-        # Acumulados Históricos (Banco)
+        # Acumulados
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
-
-        # Acumulados Históricos (Tickets Alimentación)
         ingresos_tickets_uyu, gastos_tickets_uyu = 0.0, 0.0
 
         # Totales mes filtrado
@@ -349,42 +346,12 @@ def obtener_metricas():
             if medio_pago not in ['Banco', 'Tickets']:
                 medio_pago = 'Banco'
 
-            es_ajuste = (cat.upper() == "AJUSTE") or ("AJUSTE DE SALDO" in concepto_raw.upper())
-
-            if es_mes_valido:
-                if fecha_str:
-                    fechas_unicas_filtradas.add(fecha_str)
-
-                if not es_pasivo(tipo):
-                    if moneda == 'USD': ingresos_filtrado_usd += monto
-                    else: ingresos_filtrado_uyu += monto
-                else:
-                    if moneda == 'USD':
-                        gastos_filtrado_usd += monto
-                        if es_prescindible: prescindible_filtrado_usd += monto
-                        # SOLO sumamos al desglose si NO es un ajuste de saldo
-                        if not es_ajuste:
-                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
-                            conc_key = concepto_raw.title()
-                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
-                            gastos_por_categoria[cat]['USD'] += monto
-                            gastos_por_concepto_especifico[conc_key]['USD'] += monto
-                    else:
-                        gastos_filtrado_uyu += monto
-                        if es_prescindible: prescindible_filtrado_uyu += monto
-                        # SOLO sumamos al desglose si NO es un ajuste de saldo
-                        if not es_ajuste:
-                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
-                            conc_key = concepto_raw.title()
-                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
-                            gastos_por_categoria[cat]['UYU'] += monto
-                            gastos_por_concepto_especifico[conc_key]['UYU'] += monto
-                            
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
             es_prescindible = presc in ['Sí', 'Si', 'True']
             es_no_prescindible = not es_prescindible
+            es_ajuste = (cat.upper() == "AJUSTE") or ("AJUSTE DE SALDO" in concepto_raw.upper())
 
             if es_pasivo(tipo) and es_prescindible and mes_registro:
                 if moneda == 'USD':
@@ -415,7 +382,7 @@ def obtener_metricas():
                     if not es_pasivo(tipo): ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
 
-            # Pronóstico Fijos (excluye el mes actual parcial)
+            # Pronóstico Fijos
             if medio_pago != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro:
                 if mes_registro != mes_actual_nombre:
                     if cat not in historial_fijos[moneda]:
@@ -443,23 +410,24 @@ def obtener_metricas():
                     if moneda == 'USD': ingresos_filtrado_usd += monto
                     else: ingresos_filtrado_uyu += monto
                 else:
-                    if cat not in gastos_por_categoria:
-                        gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
-
-                    conc_key = concepto_raw.title()
-                    if conc_key not in gastos_por_concepto_especifico:
-                        gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
-
                     if moneda == 'USD':
                         gastos_filtrado_usd += monto
-                        gastos_por_categoria[cat]['USD'] += monto
-                        gastos_por_concepto_especifico[conc_key]['USD'] += monto
                         if es_prescindible: prescindible_filtrado_usd += monto
+                        if not es_ajuste:
+                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
+                            conc_key = concepto_raw.title()
+                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
+                            gastos_por_categoria[cat]['USD'] += monto
+                            gastos_por_concepto_especifico[conc_key]['USD'] += monto
                     else:
                         gastos_filtrado_uyu += monto
-                        gastos_por_categoria[cat]['UYU'] += monto
-                        gastos_por_concepto_especifico[conc_key]['UYU'] += monto
                         if es_prescindible: prescindible_filtrado_uyu += monto
+                        if not es_ajuste:
+                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
+                            conc_key = concepto_raw.title()
+                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
+                            gastos_por_categoria[cat]['UYU'] += monto
+                            gastos_por_concepto_especifico[conc_key]['UYU'] += monto
 
                 detalles_filtrados.append({
                     "fecha": fecha_str,
@@ -475,7 +443,6 @@ def obtener_metricas():
 
         saldo_tickets_uyu = ingresos_tickets_uyu - gastos_tickets_uyu
 
-        # PROMEDIO HISTÓRICO DE PRESCINDIBLES
         cant_meses_hist = max(1, len(prescindibles_historicos_uyu))
         promedio_prescindible_uyu = sum(prescindibles_historicos_uyu.values()) / cant_meses_hist if prescindibles_historicos_uyu else prescindible_filtrado_uyu
         if promedio_prescindible_uyu <= 0: promedio_prescindible_uyu = 4000.0
@@ -494,10 +461,7 @@ def obtener_metricas():
             racha_dias = 30
         else:
             ultima_fecha_p = max(fechas_prescindibles)
-            if ultima_fecha_p == hoy_date:
-                racha_dias = 0
-            else:
-                racha_dias = (hoy_date - ultima_fecha_p).days
+            racha_dias = 0 if ultima_fecha_p == hoy_date else (hoy_date - ultima_fecha_p).days
 
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
@@ -518,10 +482,10 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
-        # DISPONIBLE PARA HOY
+        # DISPONIBLE PARA HOY (Corregido)
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
-            dias_totales_mes = calendar.monthrange(ahora.year, me_hora if 'me_hora' in locals() else me_hora if 'me_hora' in globals() else ahora.month)[1]
+            dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
             neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
@@ -530,7 +494,6 @@ def obtener_metricas():
             disponible_hoy_uyu = neto_mes_restante_uyu / dias_restantes
             disponible_hoy_usd = neto_mes_restante_usd / dias_restantes
 
-        # DIVISOR DÍAS GASTO DIARIO
         if mes_solicitado == "TODOS":
             divisor_dias = len(fechas_unicas_filtradas) if fechas_unicas_filtradas else 1
         elif mes_solicitado == mes_actual_nombre:
@@ -592,15 +555,7 @@ def obtener_metricas():
             "TARJETA SANTANDER PESOS", "TARJETA SANTANDER DOLARES", 
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
-        
-        ALIAS_EXACTOS = {
-            "PATENTE AUTO": ["PATENTE"],
-            "CHACRA CUOTA": ["CHACRA"],
-            "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
-            "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
-        }
 
-      # CONTROL DE GASTOS FIJOS (COINCIDENCIA ESTRICTA)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
             monto_pagado_uyu = 0.0
@@ -617,17 +572,13 @@ def obtener_metricas():
                 es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
 
                 if es_pasivo(tipo_r) and es_mes_valido:
-                    # Coincidencia estricta de todo el texto
                     if coincide_gasto_fijo(fijo_nombre, concepto_r):
                         fue_pagado = True
-                        if moneda_r == 'USD':
-                            monto_pagado_usd += monto_r
-                        else:
-                            monto_pagado_uyu += monto_r
+                        if moneda_r == 'USD': monto_pagado_usd += monto_r
+                        else: monto_pagado_uyu += monto_r
 
             es_fijo_usd = "DOLARES" in fijo_nombre
             
-            # Determinamos el monto final y la moneda real abonada
             if monto_pagado_usd > 0 and monto_pagado_uyu == 0:
                 moneda_final = "USD"
                 monto_final = monto_pagado_usd
