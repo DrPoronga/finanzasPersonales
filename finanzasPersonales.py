@@ -661,6 +661,33 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/obtener_conceptos', methods=['GET'])
+@requiere_pin
+def obtener_conceptos():
+    try:
+        registros, _ = obtener_registros_cached()
+        
+        # Filtramos y normalizamos conceptos únicos en formato Title
+        pasivos = set()
+        activos = set()
+        
+        for r in registros:
+            c = str(r.get('Concepto', '')).strip().title()
+            if not c:
+                continue
+            if es_pasivo(r.get('Tipo')):
+                pasivos.add(c)
+            else:
+                activos.add(c)
+
+        return jsonify({
+            "status": "success",
+            "pasivos": sorted(list(pasivos)),
+            "activos": sorted(list(activos))
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
         
 if __name__ == '__main__':
     app.run(debug=True)

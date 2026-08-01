@@ -55,8 +55,9 @@
             <section id="vistaFormulario">
                 <form id="registroForm">
                     <div class="form-group">
-                        <input type="text" id="concepto" placeholder="Concepto" required>
-                    </div>
+						<input type="text" id="concepto" list="listaConceptosAuto" placeholder="Concepto" autocomplete="off" required>
+						<datalist id="listaConceptosAuto"></datalist>
+					</div>
                     
                     <div class="form-group">
                         <input type="text" id="monto" placeholder="Monto (ej: 1234.00)" inputmode="decimal" required>
@@ -124,14 +125,17 @@
 
                 <!-- TARJETA SALDO TICKETS ALIMENTACIÓN -->
                 <div class="card tickets-card">
-                    <h3>Saldo Tickets Alimentación</h3>
-                    <div class="monto-group">
-                        <div class="monto-row">
-                            <span class="badge">TICKETS</span>
-                            <span id="lblSaldoTickets" class="monto-num">$0</span>
-                        </div>
-                    </div>
-                </div>
+					<div style="display: flex; justify-content: space-between; align-items: center;">
+						<h3>Saldo Tickets Alimentación</h3>
+						<button type="button" class="btn-edit-balance" onclick="editarSaldo('Tickets', 'UYU')">✏️</button>
+					</div>
+					<div class="monto-group">
+						<div class="monto-row">
+							<span class="badge">TICKETS</span>
+							<span id="lblSaldoTickets" class="monto-num">$0</span>
+						</div>
+					</div>
+				</div>
 
                 <!-- DESTACADO: DISPONIBLE HOY -->
                 <div class="card disponible-card">
@@ -150,18 +154,24 @@
 
                 <!-- BANCO -->
                 <div class="card balance-card">
-                    <h3>Dinero en el banco</h3>
-                    <div class="monto-group">
-                        <div class="monto-row">
-                            <span class="badge">UYU</span>
-                            <span id="lblBalanceUYU" class="monto-num">$0</span>
-                        </div>
-                        <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblBalanceUSD" class="monto-num">US$0</span>
-                        </div>
-                    </div>
-                </div>
+					<div style="display: flex; justify-content: space-between; align-items: center;">
+						<h3>Dinero en el banco</h3>
+						<div>
+							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'UYU')" title="Ajustar Pesos">✏️ UYU</button>
+							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'USD')" title="Ajustar Dólares">✏️ USD</button>
+						</div>
+					</div>
+					<div class="monto-group">
+						<div class="monto-row">
+							<span class="badge">UYU</span>
+							<span id="lblBalanceUYU" class="monto-num">$0</span>
+						</div>
+						<div class="monto-row">
+							<span class="badge">USD</span>
+							<span id="lblBalanceUSD" class="monto-num">US$0</span>
+						</div>
+					</div>
+				</div>
 
                 <!-- TARJETA OBJETIVOS DE AHORRO (SEMANAL Y MENSUAL) -->
                 <div class="card objetivos-card">

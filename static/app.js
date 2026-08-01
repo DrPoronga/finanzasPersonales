@@ -170,7 +170,102 @@ document.addEventListener("DOMContentLoaded", () => {
 		touchStartY = 0;
 		touchMoveY = 0;
 	});
+	
+	window.editarSaldo = async function(medioPago, moneda) {
+    let saldoActual = 0;
 
+    if (medioPago === 'Tickets') {
+        saldoActual = saldoTicketsDisponibleNum || 0;
+    } else {
+        // Obtenemos el saldo numérico actual del banco desde el DOM o caché
+        const elemStr = (moneda === 'USD') 
+            ? document.getElementById('lblBalanceUSD').textContent 
+            : document.getElementById('lblBalanceUYU').textContent;
+        saldoActual = parseFloat(elemStr.replace(/[^0-9.-]+/g, "")) || 0;
+    }
+
+    const nuevoSaldoStr = prompt(`Ingrese el nuevo saldo real para ${medioPago} (${moneda}):`, saldoActual);
+    if (nuevoSaldoStr === null) return; // Cancelado por el usuario
+
+    const nuevoSaldo = parseFloat(nuevoSaldoStr.replace(',', '.'));
+    if (isNaN(nuevoSaldo)) {
+        alert("Por favor ingrese un número válido.");
+        return;
+    }
+
+    const diferencia = nuevoSaldo - saldoActual;
+    if (Math.abs(diferencia) < 0.01) {
+        alert("El saldo ingresado es igual al actual.");
+        return;
+    }
+
+    // Definimos si es ingreso o gasto de ajuste
+    const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
+    const montoAjuste = Math.abs(diferencia);
+
+    const datosAjuste = {
+        concepto: "Ajuste de Saldo",
+        monto: montoAjuste,
+        moneda: moneda,
+        medio_pago: medioPago,
+        tipo: tipoAjuste,
+        prescindible: false,
+        nueva_categoria: "Ajuste"
+    };
+
+    try {
+        const res = await fetch('/registrar_gasto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosAjuste)
+        });
+
+        const resData = await res.json();
+        if (resData.status === 'success') {
+            alert(`Saldo ajustado con éxito mediante un movimiento de ${tipoAjuste} por ${montoAjuste.toFixed(2)} ${moneda}.`);
+            cargarMetricas(selectMesFiltro.value, true);
+            cargarConceptos();
+        } else {
+            alert("Error ajustando saldo: " + resData.message);
+        }
+    } catch (e) {
+        alert("Error de conexión al ajustar saldo.");
+    }
+};
+	
+	let conceptosCache = { pasivos: [], activos: [] };
+
+	async function cargarConceptos() {
+		try {
+			const res = await fetch('/obtener_conceptos');
+			if (!res.ok) return;
+			const data = await res.json();
+			if (data.status === 'success') {
+				conceptosCache.pasivos = data.pasivos;
+				conceptosCache.activos = data.activos;
+				actualizarDatalist();
+			}
+		} catch (e) {
+			console.error("Error cargando lista de autocompletado", e);
+		}
+	}
+
+	function actualizarDatalist() {
+		const datalist = document.getElementById('listaConceptosAuto');
+		if (!datalist) return;
+		
+		datalist.innerHTML = '';
+		const lista = (tipoActual === "Pasivo") ? conceptosCache.pasivos : conceptosCache.activos;
+
+		lista.forEach(item => {
+			const option = document.createElement('option');
+			option.value = item;
+			datalist.appendChild(option);
+		});
+	}
+
+	// Llama a cargarConceptos() dentro de checkAutenticacion() o al desbloquear la App:
+	// desbloquearApp() -> cargarConceptos();
 	// Modifica el encabezado de tu función cargarMetricas para recibir el parámetro 'force':
 	async function cargarMetricas(mesSeleccionado = '', force = false) {
 		try {
@@ -241,6 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.addEventListener('click', toggleMenu);
 
     menuGasto.addEventListener('click', (e) => {
+		actualizarDatalist();
         e.preventDefault();
         tipoActual = "Pasivo";
         btnSubmit.textContent = "Registrar Gasto";
@@ -251,6 +347,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     menuIngreso.addEventListener('click', (e) => {
+		actualizarDatalist();
         e.preventDefault();
         tipoActual = "Activo";
         btnSubmit.textContent = "Registrar Ingreso";
