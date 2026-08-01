@@ -257,58 +257,17 @@ def es_pasivo(tipo):
     t = str(tipo or '').strip().lower()
     return t not in ['activo', 'activos', 'ingreso', 'ingresos']
 
-def coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
-    c = str(concepto_r or '').lower().strip()
-    f = str(fijo_nombre or '').upper().strip()
+def coincide_gasto_fijo(fijo_nombre, concepto_r):
+    c = str(concepto_r or '').strip().upper()
+    f = str(fijo_nombre or '').strip().upper()
 
-    # Servicios básicos (Búsqueda por palabra completa \b)
-    if f == "UTE":
-        return re.search(r'\bute\b', c) is not None
-    if f == "OSE":
-        return re.search(r'\bose\b', c) is not None
-    if f == "ANTEL":
-        return re.search(r'\bantel\b', c) is not None
+    # 1. Coincidencia exacta de la cadena completa (sin importar mayúsculas/minúsculas)
+    if c == f:
+        return True
 
-    # Varios
-    if f == "PATENTE AUTO":
-        return "patente" in c
-    if f == "CAMILA VISA":
-        return "camila" in c and "visa" in c
-    if f == "JIU-JITSU":
-        return "jiu" in c or "jitsu" in c
-    if f == "CHACRA CUOTA":
-        return "chacra" in c
-    if f == "PRESTAMO ITAU":
-        return "prestamo" in c and "itau" in c
-
-    # Préstamo OCA (Exige palabra completa "oca" y la palabra "prestamo")
-    if f == "PRESTAMO OCA":
-        return "prestamo" in c and re.search(r'\boca\b', c) is not None
-
-    # Tarjetas BBVA
-    if "BBVA" in f:
-        if "PESOS" in f: return "bbva" in c and "dolar" not in c and moneda_r == "UYU"
-        if "DOLARES" in f: return "bbva" in c and ("dolar" in c or moneda_r == "USD")
-
-    # Tarjetas OCA (Usa \boca\b para ignorar Coca Cola)
-    if "TARJETA OCA" in f:
-        es_oca = re.search(r'\boca\b', c) is not None and "prestamo" not in c
-        if not es_oca:
-            return False
-        if "PESOS" in f:
-            return "pesos" in c or "tarjeta oca pesos" in c or (moneda_r == "UYU" and "dolar" not in c)
-        if "DOLARES" in f:
-            return "dolar" in c or "usd" in c or "tarjeta oca dolares" in c or moneda_r == "USD"
-
-    # Tarjetas Itaú
-    if "ITAU" in f and "PRESTAMO" not in f:
-        if "PESOS" in f: return "itau" in c and "prestamo" not in c and ("pesos" in c or moneda_r == "UYU")
-        if "DOLARES" in f: return "itau" in c and "prestamo" not in c and ("dolar" in c or moneda_r == "USD")
-
-    # Tarjetas Santander
-    if "SANTANDER" in f:
-        if "PESOS" in f: return "santander" in c and ("pesos" in c or moneda_r == "UYU")
-        if "DOLARES" in f: return "santander" in c and ("dolar" in c or moneda_r == "USD")
+    # 2. Coincidencia con alias exacto autorizado
+    if f in ALIAS_EXACTOS and c in ALIAS_EXACTOS[f]:
+        return True
 
     return False
     
@@ -590,14 +549,19 @@ def obtener_metricas():
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "PATENTE AUTO", "ANTEL", 
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
-            "PRESTAMO OCA", 
-            "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
-            "TARJETA ITAU PESOS", "TARJETA ITAU DOLARES", 
+            "PRESTAMO OCA", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
             "TARJETA SANTANDER PESOS", "TARJETA SANTANDER DOLARES", 
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
+        
+        ALIAS_EXACTOS = {
+            "PATENTE AUTO": ["PATENTE"],
+            "CHACRA CUOTA": ["CHACRA"],
+            "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
+            "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
+        }
 
-       # CONTROL DE GASTOS FIJOS (CON DETECCIÓN DINÁMICA DE MONEDA)
+      # CONTROL DE GASTOS FIJOS (COINCIDENCIA ESTRICTA)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
             monto_pagado_uyu = 0.0
@@ -614,14 +578,17 @@ def obtener_metricas():
                 es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
 
                 if es_pasivo(tipo_r) and es_mes_valido:
-                    if coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
+                    # Coincidencia estricta de todo el texto
+                    if coincide_gasto_fijo(fijo_nombre, concepto_r):
                         fue_pagado = True
                         if moneda_r == 'USD':
                             monto_pagado_usd += monto_r
                         else:
                             monto_pagado_uyu += monto_r
 
-            # Asigna la moneda según la transacción real efectuada
+            es_fijo_usd = "DOLARES" in fijo_nombre
+            
+            # Determinamos el monto final y la moneda real abonada
             if monto_pagado_usd > 0 and monto_pagado_uyu == 0:
                 moneda_final = "USD"
                 monto_final = monto_pagado_usd
@@ -629,10 +596,10 @@ def obtener_metricas():
                 moneda_final = "UYU"
                 monto_final = monto_pagado_uyu
             elif monto_pagado_usd > 0 and monto_pagado_uyu > 0:
-                moneda_final = "USD" if "DOLARES" in fijo_nombre else "UYU"
-                monto_final = monto_pagado_usd if moneda_final == "USD" else monto_pagado_uyu
+                moneda_final = "USD" if es_fijo_usd else "UYU"
+                monto_final = monto_pagado_usd if es_fijo_usd else monto_pagado_uyu
             else:
-                moneda_final = "USD" if "DOLARES" in fijo_nombre else "UYU"
+                moneda_final = "USD" if es_fijo_usd else "UYU"
                 monto_final = 0.0
 
             detalles_fijos.append({
