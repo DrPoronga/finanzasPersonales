@@ -261,7 +261,15 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
     c = str(concepto_r or '').strip().upper()
     f = str(fijo_nombre or '').strip().upper()
 
-    # 1. Coincidencia exacta de la cadena completa (sin importar mayúsculas/minúsculas)
+    # Diccionario de alias exactos
+    ALIAS_EXACTOS = {
+        "PATENTE AUTO": ["PATENTE"],
+        "CHACRA CUOTA": ["CHACRA"],
+        "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
+        "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
+    }
+
+    # 1. Coincidencia exacta de la cadena completa
     if c == f:
         return True
 
@@ -554,7 +562,13 @@ def obtener_metricas():
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
         
-        
+        ALIAS_EXACTOS = {
+            "PATENTE AUTO": ["PATENTE"],
+            "CHACRA CUOTA": ["CHACRA"],
+            "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
+            "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
+        }
+
       # CONTROL DE GASTOS FIJOS (COINCIDENCIA ESTRICTA)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
