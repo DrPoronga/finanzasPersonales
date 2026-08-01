@@ -116,6 +116,81 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) { bloquearApp(); }
     }
 
+	// --- LÓGICA PULL-TO-REFRESH ESTILO IOS ---
+	const ptrIndicator = document.getElementById('ptrIndicator');
+	const ptrText = document.getElementById('ptrText');
+	const ptrSpinner = document.getElementById('ptrSpinner');
+
+	let touchStartY = 0;
+	let touchMoveY = 0;
+	let isPulling = false;
+
+	window.addEventListener('touchstart', (e) => {
+		// Solo activa la estirada si estamos arriba del todo y en la vista de métricas
+		if (window.scrollY <= 5 && !vistaMetricas.classList.contains('hidden')) {
+			touchStartY = e.touches[0].clientY;
+			isPulling = true;
+		}
+	}, { passive: true });
+
+	window.addEventListener('touchmove', (e) => {
+		if (!isPulling) return;
+		touchMoveY = e.touches[0].clientY;
+		const diff = touchMoveY - touchStartY;
+
+		if (diff > 30) {
+			ptrIndicator.classList.add('visible');
+			if (diff > 80) {
+				ptrText.textContent = "Suelta para actualizar";
+			} else {
+				ptrText.textContent = "Desliza para actualizar";
+			}
+		}
+	}, { passive: true });
+
+	window.addEventListener('touchend', () => {
+		if (!isPulling) return;
+		const diff = touchMoveY - touchStartY;
+		
+		if (diff > 80) {
+			ptrText.textContent = "Actualizando...";
+			ptrSpinner.classList.remove('hidden');
+			
+			cargarMetricas(selectMesFiltro.value, true).finally(() => {
+				setTimeout(() => {
+					ptrIndicator.classList.remove('visible');
+					ptrSpinner.classList.add('hidden');
+				}, 500);
+			});
+		} else {
+			ptrIndicator.classList.remove('visible');
+		}
+		
+		isPulling = false;
+		touchStartY = 0;
+		touchMoveY = 0;
+	});
+
+	// Modifica el encabezado de tu función cargarMetricas para recibir el parámetro 'force':
+	async function cargarMetricas(mesSeleccionado = '', force = false) {
+		try {
+			let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+			if (force) {
+				url += (url.includes('?') ? '&' : '?') + 'force=true';
+			}
+
+			const res = await fetch(url);
+			if (res.status === 401) { bloquearApp(); return; }
+			
+			const data = await res.json();
+			if (data.status === 'success') {
+				// ... (Conserva todo el código interno que ya tenías asignando los datos) ...
+			}
+		} catch (error) {
+			console.error("Error cargando métricas", error);
+		}
+	}
+
     function desbloquearApp() {
         pantallaPin.classList.add('hidden');
         contenidoApp.classList.remove('hidden');

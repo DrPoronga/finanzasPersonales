@@ -13,6 +13,12 @@
 </head>
 <body>
 
+    <!-- INDICADOR PULL-TO-REFRESH ESTILO IOS -->
+    <div id="ptrIndicator" class="ptr-indicator">
+        <div id="ptrSpinner" class="spinner hidden"></div>
+        <span id="ptrText">Desliza para actualizar</span>
+    </div>
+
     <!-- PANTALLA DE BLOQUEO POR PIN -->
     <div id="pantallaPin" class="pin-screen">
         <div class="pin-box">
@@ -28,17 +34,10 @@
     <!-- CONTENIDO PRINCIPAL -->
     <div id="contenidoApp" class="hidden">
         
-        <!-- HEADER CON BOTÓN HAMBURGUESA Y BOTÓN DE REFRESCO -->
+        <!-- HEADER LIMPIO (SOLO HAMBURGUESA) -->
         <header class="navbar">
             <button id="btnMenu" class="hamburger-btn">☰</button>
-            <button id="btnRefresh" class="refresh-btn" title="Refrescar datos">🔄</button>
         </header>
-
-        <!-- Indicador visual de Pull to Refresh -->
-        <div id="ptrIndicator" class="ptr-indicator hidden">
-            <span class="ptr-icon">🔄</span>
-            <span id="ptrText">Desliza para actualizar...</span>
-        </div>
 
         <nav id="sideMenu" class="side-menu hidden">
             <button id="btnCloseMenu" class="close-btn">&times;</button>

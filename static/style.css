@@ -32,6 +32,7 @@ body {
     top: 20px;
     left: 20px;
     z-index: 100;
+    width: auto;
 }
 
 .hamburger-btn {
@@ -1147,18 +1148,32 @@ button:hover {
 
 .ptr-indicator {
     position: fixed;
-    top: 15px;
+    top: -60px;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--primary);
-    color: white;
-    padding: 8px 16px;
+    background: #171717;
+    color: #FFFFFF;
+    padding: 8px 18px;
     border-radius: 20px;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 500;
     display: flex;
     align-items: center;
     gap: 8px;
-    z-index: 1500;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 2000;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    transition: top 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+.ptr-indicator.visible {
+    top: 20px;
+}
+
+.spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
 }
