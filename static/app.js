@@ -171,90 +171,83 @@ document.addEventListener("DOMContentLoaded", () => {
         touchMoveY = 0;
     });
 	
-    window.editarSaldo = async function(medioPago, moneda) {
-        await cargarMetricas(selectMesFiltro.value, true);
+window.editarSaldo = async function(medioPago, moneda) {
+    // 1. Forzamos la actualización de métricas para traer saldos reales
+    await cargarMetricas(selectMesFiltro.value, true);
 
-        let saldoActual = 0;
-        if (medioPago === 'Tickets') {
-            saldoActual = saldoTicketsDisponibleNum || 0;
-        } else if (moneda === 'USD') {
-            saldoActual = balanceUSDNum || 0;
+    let saldoActual = 0;
+    if (medioPago === 'Tickets') {
+        saldoActual = saldoTicketsDisponibleNum || 0;
+    } else if (moneda === 'USD') {
+        saldoActual = balanceUSDNum || 0; // Utiliza SOLO el saldo en USD
+    } else {
+        saldoActual = balanceUYUNum || 0; // Utiliza SOLO el saldo en UYU
+    }
+
+    const simbolo = moneda === 'USD' ? 'US$' : '$';
+    const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+
+    const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
+                      `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
+                      `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
+
+    const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
+    if (nuevoSaldoStr === null) return;
+
+    let valorLimpio = nuevoSaldoStr.trim();
+    if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
+        if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
+            valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
         } else {
-            saldoActual = balanceUYUNum || 0;
+            valorLimpio = valorLimpio.replace(/,/g, '');
         }
+    } else if (valorLimpio.includes(',')) {
+        valorLimpio = valorLimpio.replace(',', '.');
+    }
 
-        const simbolo = moneda === 'USD' ? 'US$' : '$';
-        const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+    const nuevoSaldo = parseFloat(valorLimpio);
+    if (isNaN(nuevoSaldo)) {
+        alert("Por favor ingrese un número válido.");
+        return;
+    }
 
-        const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
-                          `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
-                          `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
+    const diferencia = nuevoSaldo - saldoActual;
+    if (Math.abs(diferencia) < 0.01) {
+        alert("El saldo ingresado es igual al actual.");
+        return;
+    }
 
-        const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
-        if (nuevoSaldoStr === null) return;
+    const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
+    const montoAjuste = Math.abs(diferencia);
 
-        let valorLimpio = nuevoSaldoStr.trim();
-        if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
-            if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
-                valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
-            } else {
-                valorLimpio = valorLimpio.replace(/,/g, '');
-            }
-        } else if (valorLimpio.includes(',')) {
-            valorLimpio = valorLimpio.replace(',', '.');
-        }
-
-        const nuevoSaldo = parseFloat(valorLimpio);
-        if (isNaN(nuevoSaldo)) {
-            alert("Por favor ingrese un número válido.");
-            return;
-        }
-
-        const diferencia = nuevoSaldo - saldoActual;
-        if (Math.abs(diferencia) < 0.01) {
-            alert("El saldo ingresado es igual al actual.");
-            return;
-        }
-
-        const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
-        const montoAjuste = Math.abs(diferencia);
-
-        if (montoAjuste > 10000) {
-            const superConfirmar = confirm(
-                `⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
-                `¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
-            );
-            if (!superConfirmar) return;
-        }
-
-        const datosAjuste = {
-            concepto: "Ajuste de Saldo",
-            monto: montoAjuste,
-            moneda: moneda,
-            medio_pago: medioPago,
-            tipo: tipoAjuste,
-            prescindible: false,
-            nueva_categoria: "Ajuste"
-        };
-
-        try {
-            const res = await fetch('/registrar_gasto', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(datosAjuste)
-            });
-
-            const resData = await res.json();
-            if (resData.status === 'success') {
-                alert(`Saldo ajustado correctamente en ${moneda}.`);
-                cargarMetricas(selectMesFiltro.value, true);
-            } else {
-                alert("Error ajustando saldo: " + resData.message);
-            }
-        } catch (e) {
-            alert("Error de conexión al ajustar saldo.");
-        }
+    const datosAjuste = {
+        concepto: "Ajuste de Saldo",
+        monto: montoAjuste,
+        moneda: moneda,
+        medio_pago: medioPago,
+        tipo: tipoAjuste,
+        prescindible: false,
+        nueva_categoria: "Ajuste"
     };
+
+    try {
+        const res = await fetch('/registrar_gasto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datosAjuste)
+        });
+
+        const resData = await res.json();
+        if (resData.status === 'success') {
+            alert(`Saldo ajustado correctamente en ${moneda}.`);
+            cargarMetricas(selectMesFiltro.value, true);
+        } else {
+            alert("Error ajustando saldo: " + resData.message);
+        }
+    } catch (e) {
+        alert("Error de conexión al ajustar saldo.");
+    }
+};
 
     let conceptosCache = { pasivos: [], activos: [] };
 
