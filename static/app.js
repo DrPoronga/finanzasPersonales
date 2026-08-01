@@ -761,8 +761,12 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const concepto = conceptoInput.value.trim();
         const valorLimpio = montoInput.value.replace(',', '.').trim();
-		const monto = parseFloat(valorLimpio);
-        const moneda = selectMoneda.value;
+        const monto = parseFloat(valorLimpio);
+
+        // ✅ LEER DIRECTAMENTE EL RADIO SELECCIONADO EN PANTALLA
+        const radioMonedaChecked = document.querySelector('input[name="monedaRadio"]:checked');
+        const moneda = radioMonedaChecked ? radioMonedaChecked.value : 'UYU';
+
         const medio_pago = selectMedioPago.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
 
@@ -771,7 +775,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gastoPendiente = { concepto, monto, moneda, medio_pago, tipo: tipoActual, prescindible };
         enviarMovimiento(gastoPendiente);
     });
-
+	
     async function enviarMovimiento(datos) {
         btnSubmit.textContent = "Procesando...";
         btnSubmit.disabled = true;
@@ -792,6 +796,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (data.status === 'success') {
                 mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
+				if (radioUYU) radioUYU.checked = true;
+                if (inputMoneda) inputMoneda.value = 'UYU';
                 chkPrescindible.checked = false;
                 radioBanco.checked = true;
                 selectMedioPago.value = 'Banco';
