@@ -28,9 +28,17 @@
     <!-- CONTENIDO PRINCIPAL -->
     <div id="contenidoApp" class="hidden">
         
+        <!-- HEADER CON BOTÓN HAMBURGUESA Y BOTÓN DE REFRESCO -->
         <header class="navbar">
             <button id="btnMenu" class="hamburger-btn">☰</button>
+            <button id="btnRefresh" class="refresh-btn" title="Refrescar datos">🔄</button>
         </header>
+
+        <!-- Indicador visual de Pull to Refresh -->
+        <div id="ptrIndicator" class="ptr-indicator hidden">
+            <span class="ptr-icon">🔄</span>
+            <span id="ptrText">Desliza para actualizar...</span>
+        </div>
 
         <nav id="sideMenu" class="side-menu hidden">
             <button id="btnCloseMenu" class="close-btn">&times;</button>
@@ -159,7 +167,7 @@
                 <!-- TARJETA OBJETIVOS DE AHORRO (SEMANAL Y MENSUAL) -->
                 <div class="card objetivos-card">
                     <h4>Metas de Ahorro "Al Pedo"</h4>
-                    <p class="objetivos-sub">Tope calculated reduciendo 20% tu promedio histórico</p>
+                    <p class="objetivos-sub">Tope calculado reduciendo 20% tu promedio histórico</p>
                     
                     <div class="objetivo-box">
                         <div class="objetivo-header">
@@ -279,7 +287,7 @@
         <!-- MODAL CLASIFICAR -->
         <div id="modalCategoria" class="modal hidden">
             <div class="modal-content">
-                2 Clasificar</h2>
+                <h2>Clasificar</h2>
                 <p>Categoría para "<span id="conceptoModal"></span>":</p>
                 
                 <select id="selectCategoria"></select>

@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, session
 from datetime import datetime, timedelta
 from functools import wraps
 import calendar
+import re
 import os
 import json
 import time
@@ -120,18 +121,6 @@ def requiere_pin(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def detectar_categoria(registros_cat, concepto_ingresado):
-    try:
-        concepto_lower = concepto_ingresado.lower().strip()
-        for fila in registros_cat:
-            palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
-            if palabra_clave and palabra_clave in concepto_lower:
-                return fila.get('Categoria', 'Varios')
-    except Exception as e:
-        print(f"Aviso detectando categoría: {e}")
-        
-    return None
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -238,11 +227,30 @@ def registrar_gasto():
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+import re  # <-- Asegúrate de incluir esta importación al principio del archivo
+
+def detectar_categoria(registros_cat, concepto_ingresado):
+    try:
+        concepto_lower = concepto_ingresado.lower().strip()
+        for fila in registros_cat:
+            palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
+            # Búsqueda con límites de palabra para evitar falsos positivos
+            if palabra_clave and re.search(r'\b' + re.escape(palabra_clave) + r'\b', concepto_lower):
+                return fila.get('Categoria', 'Varios')
+    except Exception as e:
+        print(f"Aviso detectando categoría: {e}")
+        
+    return None
 
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
 def obtener_metricas():
     try:
+        # Permite forzar la invalidación del caché si se solicita desde el cliente
+        force_reload = request.args.get('force', 'false').lower() == 'true'
+        if force_reload:
+            invalidar_cache()
+
         registros, _ = obtener_registros_cached()
 
         ahora = datetime.now()
@@ -274,6 +282,7 @@ def obtener_metricas():
         gastos_por_categoria = {}
         gastos_por_concepto_especifico = {}
         meses_encontrados = set()
+        fechas_unicas_filtradas = set()
 
         historial_fijos = {'USD': {}, 'UYU': {}}
         pagado_fijos_mes_actual = {'USD': {}, 'UYU': {}}
@@ -298,7 +307,6 @@ def obtener_metricas():
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
 
-            # LECTURA COMPATIBLE DE LA COLUMNA (Busca 'Cuenta' o 'Medio de Pago')
             medio_pago_raw = r.get('Cuenta') or r.get('Medio de Pago') or 'Banco'
             medio_pago = str(medio_pago_raw).strip().capitalize()
             if medio_pago not in ['Banco', 'Tickets']:
@@ -332,7 +340,6 @@ def obtener_metricas():
                 if tipo == 'Activo': ingresos_tickets_uyu += monto
                 else: gastos_tickets_uyu += monto
             else:
-                # Banco / Efectivo Normal
                 if moneda == 'USD':
                     if tipo == 'Activo': ingresos_acum_usd += monto
                     else: gastos_acum_usd += monto
@@ -340,13 +347,13 @@ def obtener_metricas():
                     if tipo == 'Activo': ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
 
-            # Pronóstico Fijos (solo aplica a Banco)
+            # Pronóstico Fijos (excluye mes actual parcial del historial)
             if medio_pago != 'Tickets' and tipo == 'Pasivo' and es_no_prescindible and mes_registro:
-                if cat not in historial_fijos[moneda]:
-                    historial_fijos[moneda][cat] = {}
-                historial_fijos[moneda][cat][mes_registro] = historial_fijos[moneda][cat].get(mes_registro, 0.0) + monto
-
-                if mes_registro == mes_actual_nombre:
+                if mes_registro != mes_actual_nombre:
+                    if cat not in historial_fijos[moneda]:
+                        historial_fijos[moneda][cat] = {}
+                    historial_fijos[moneda][cat][mes_registro] = historial_fijos[moneda][cat].get(mes_registro, 0.0) + monto
+                else:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
 
             # Comparativa Mes Anterior
@@ -361,6 +368,9 @@ def obtener_metricas():
             # Filtro mes
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
+                if fecha_str:
+                    fechas_unicas_filtradas.add(fecha_str)
+
                 if tipo == 'Activo':
                     if moneda == 'USD': ingresos_filtrado_usd += monto
                     else: ingresos_filtrado_uyu += monto
@@ -395,18 +405,18 @@ def obtener_metricas():
                     "medio_pago": medio_pago
                 })
 
-        # Saldo real de Tickets Alimentación
         saldo_tickets_uyu = ingresos_tickets_uyu - gastos_tickets_uyu
 
-        # CÁLCULO DE PROMEDIO HISTÓRICO DE PRESCINDIBLES
+        # PROMEDIO HISTÓRICO DE PRESCINDIBLES
         cant_meses_hist = max(1, len(prescindibles_historicos_uyu))
         promedio_prescindible_uyu = sum(prescindibles_historicos_uyu.values()) / cant_meses_hist if prescindibles_historicos_uyu else prescindible_filtrado_uyu
         if promedio_prescindible_uyu <= 0: promedio_prescindible_uyu = 4000.0
 
-        meta_mensual_prescindible_uyu = promedio_prescindible_uyu * 0.80
+        cant_meses_filtrados = len(meses_encontrados) if mes_solicitado == "TODOS" else 1
+        meta_mensual_prescindible_uyu = (promedio_prescindible_uyu * 0.80) * cant_meses_filtrados
         disponible_meta_mensual_uyu = meta_mensual_prescindible_uyu - prescindible_filtrado_uyu
 
-        meta_semanal_prescindible_uyu = meta_mensual_prescindible_uyu / 4.0
+        meta_semanal_prescindible_uyu = (promedio_prescindible_uyu * 0.80) / 4.0
         disponible_meta_semanal_uyu = meta_semanal_prescindible_uyu - gastado_semana_actual_uyu
 
         pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / meta_mensual_prescindible_uyu * 100)) if meta_mensual_prescindible_uyu > 0 else 0.0
@@ -440,18 +450,28 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
+        # DISPONIBLE PARA HOY (Corregido a presupuesto disponible del mes actual)
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
-            balance_disponible_usd = max(0.0, balance_real_usd - compromisos_pendientes_usd)
-            balance_disponible_uyu = max(0.0, balance_real_uyu - compromisos_pendientes_uyu)
+            # Presupuesto disponible = Ingresos del mes - Compromisos Pendientes - Gastos Ya Realizados
+            neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
+            neto_mes_restante_usd = max(0.0, ingresos_filtrado_usd - compromisos_pendientes_usd - gastos_filtrado_usd)
 
-            disponible_hoy_usd = balance_disponible_usd / dias_restantes
-            disponible_hoy_uyu = balance_disponible_uyu / dias_restantes
+            disponible_hoy_uyu = neto_mes_restante_uyu / dias_restantes
+            disponible_hoy_usd = neto_mes_restante_usd / dias_restantes
 
-        divisor_dias = max(1, ahora.day) if mes_solicitado == mes_actual_nombre else 30
+        # DIVISOR DÍAS GASTO DIARIO
+        if mes_solicitado == "TODOS":
+            divisor_dias = len(fechas_unicas_filtradas) if fechas_unicas_filtradas else 1
+        elif mes_solicitado == mes_actual_nombre:
+            divisor_dias = max(1, ahora.day)
+        else:
+            num_m = MESES_INV.get(mes_solicitado, ahora.month)
+            divisor_dias = calendar.monthrange(ahora.year, num_m)[1]
+
         gasto_diario_usd = gastos_filtrado_usd / divisor_dias if divisor_dias > 0 else 0.0
         gasto_diario_uyu = gastos_filtrado_uyu / divisor_dias if divisor_dias > 0 else 0.0
 
@@ -511,6 +531,9 @@ def obtener_metricas():
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
             nombre_lower = fijo_nombre.lower().strip()
+            es_usd = "DOLARES" in fijo_nombre
+            moneda_esperada = "USD" if es_usd else "UYU"
+            
             monto_pagado_uyu, monto_pagado_usd = 0.0, 0.0
             fue_pagado = False
             
@@ -523,19 +546,18 @@ def obtener_metricas():
 
                 es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
 
-                if tipo_r == 'Pasivo' and es_mes_valido:
-                    if nombre_lower in concepto_r or concepto_r in nombre_lower:
+                # Coincidencia con regex y filtro estricto de moneda
+                if tipo_r == 'Pasivo' and es_mes_valido and moneda_r == moneda_esperada:
+                    if re.search(r'\b' + re.escape(nombre_lower) + r'\b', concepto_r) or re.search(r'\b' + re.escape(concepto_r) + r'\b', nombre_lower):
                         fue_pagado = True
                         if moneda_r == 'USD': monto_pagado_usd += monto_r
                         else: monto_pagado_uyu += monto_r
 
-            es_usd = "DOLARES" in fijo_nombre
-            moneda_fijo = "USD" if es_usd else "UYU"
             monto_final = monto_pagado_usd if es_usd else monto_pagado_uyu
 
             detalles_fijos.append({
                 "concepto": fijo_nombre,
-                "moneda": moneda_fijo,
+                "moneda": moneda_esperada,
                 "monto_pagado": monto_final,
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
@@ -584,6 +606,6 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+      
 if __name__ == '__main__':
     app.run(debug=True)
