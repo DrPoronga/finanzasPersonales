@@ -57,9 +57,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const resumenModalDetalle = document.getElementById('resumenModalDetalle');
     const listaModalDetalle = document.getElementById('listaModalDetalle');
 
-	let balanceUYUNum = 0;
-	let balanceUSDNum = 0;
-	let saldoTicketsDisponibleNum = 0;
+    let balanceUYUNum = 0;
+    let balanceUSDNum = 0;
+    let saldoTicketsDisponibleNum = 0;
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
@@ -69,27 +69,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     checkAutenticacion();
 	
-	// Normalización de comas y decimales (.00)
-	montoInput.addEventListener('input', () => {
-		montoInput.value = montoInput.value.replace(',', '.');
-	});
+    // Normalización de comas y decimales (.00)
+    montoInput.addEventListener('input', () => {
+        montoInput.value = montoInput.value.replace(',', '.');
+    });
 
-	montoInput.addEventListener('blur', () => {
-		let val = montoInput.value.trim();
-		if (val !== '' && !isNaN(val)) {
-			montoInput.value = parseFloat(val).toFixed(2);
-		}
-	});
+    montoInput.addEventListener('blur', () => {
+        let val = montoInput.value.trim();
+        if (val !== '' && !isNaN(val)) {
+            montoInput.value = parseFloat(val).toFixed(2);
+        }
+    });
 
-	// TOGGLE DE MONEDA
-	const radioUYU = document.getElementById('monedaUYU');
-	const radioUSD = document.getElementById('monedaUSD');
-	const inputMoneda = document.getElementById('selectMoneda');
+    // TOGGLE DE MONEDA
+    const radioUYU = document.getElementById('monedaUYU');
+    const radioUSD = document.getElementById('monedaUSD');
+    const inputMoneda = document.getElementById('selectMoneda');
 
-	if (radioUYU && radioUSD) {
-		radioUYU.addEventListener('change', () => inputMoneda.value = 'UYU');
-		radioUSD.addEventListener('change', () => inputMoneda.value = 'USD');
-	}
+    if (radioUYU && radioUSD) {
+        radioUYU.addEventListener('change', () => inputMoneda.value = 'UYU');
+        radioUSD.addEventListener('change', () => inputMoneda.value = 'USD');
+    }
 
     // TOGGLE DE MEDIO DE PAGO
     if (radioBanco && radioTickets) {
@@ -100,7 +100,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         radioTickets.addEventListener('change', () => {
             if (tipoActual === 'Pasivo' && saldoTicketsDisponibleNum <= 0) {
-                // Si el saldo está en 0 y es un gasto, avisamos y forzamos a Banco
                 radioBanco.checked = true;
                 selectMedioPago.value = 'Banco';
                 msgTicketsStatus.classList.remove('hidden');
@@ -118,267 +117,180 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (e) { bloquearApp(); }
     }
 
-	// --- LÓGICA PULL-TO-REFRESH ESTILO IOS ---
-	const ptrIndicator = document.getElementById('ptrIndicator');
-	const ptrText = document.getElementById('ptrText');
-	const ptrSpinner = document.getElementById('ptrSpinner');
+    // --- LÓGICA PULL-TO-REFRESH ESTILO IOS ---
+    const ptrIndicator = document.getElementById('ptrIndicator');
+    const ptrText = document.getElementById('ptrText');
+    const ptrSpinner = document.getElementById('ptrSpinner');
 
-	let touchStartY = 0;
-	let touchMoveY = 0;
-	let isPulling = false;
+    let touchStartY = 0;
+    let touchMoveY = 0;
+    let isPulling = false;
 
-	window.addEventListener('touchstart', (e) => {
-		// Solo activa la estirada si estamos arriba del todo y en la vista de métricas
-		if (window.scrollY <= 5 && !vistaMetricas.classList.contains('hidden')) {
-			touchStartY = e.touches[0].clientY;
-			isPulling = true;
-		}
-	}, { passive: true });
+    window.addEventListener('touchstart', (e) => {
+        if (window.scrollY <= 5 && !vistaMetricas.classList.contains('hidden')) {
+            touchStartY = e.touches[0].clientY;
+            isPulling = true;
+        }
+    }, { passive: true });
 
-	window.addEventListener('touchmove', (e) => {
-		if (!isPulling) return;
-		touchMoveY = e.touches[0].clientY;
-		const diff = touchMoveY - touchStartY;
+    window.addEventListener('touchmove', (e) => {
+        if (!isPulling) return;
+        touchMoveY = e.touches[0].clientY;
+        const diff = touchMoveY - touchStartY;
 
-		if (diff > 30) {
-			ptrIndicator.classList.add('visible');
-			if (diff > 80) {
-				ptrText.textContent = "Suelta para actualizar";
-			} else {
-				ptrText.textContent = "Desliza para actualizar";
-			}
-		}
-	}, { passive: true });
+        if (diff > 30) {
+            ptrIndicator.classList.add('visible');
+            if (diff > 80) {
+                ptrText.textContent = "Suelta para actualizar";
+            } else {
+                ptrText.textContent = "Desliza para actualizar";
+            }
+        }
+    }, { passive: true });
 
-	window.addEventListener('touchend', () => {
-		if (!isPulling) return;
-		const diff = touchMoveY - touchStartY;
+    window.addEventListener('touchend', () => {
+        if (!isPulling) return;
+        const diff = touchMoveY - touchStartY;
 		
-		if (diff > 80) {
-			ptrText.textContent = "Actualizando...";
-			ptrSpinner.classList.remove('hidden');
+        if (diff > 80) {
+            ptrText.textContent = "Actualizando...";
+            ptrSpinner.classList.remove('hidden');
 			
-			cargarMetricas(selectMesFiltro.value, true).finally(() => {
-				setTimeout(() => {
-					ptrIndicator.classList.remove('visible');
-					ptrSpinner.classList.add('hidden');
-				}, 500);
-			});
-		} else {
-			ptrIndicator.classList.remove('visible');
-		}
+            cargarMetricas(selectMesFiltro.value, true).finally(() => {
+                setTimeout(() => {
+                    ptrIndicator.classList.remove('visible');
+                    ptrSpinner.classList.add('hidden');
+                }, 500);
+            });
+        } else {
+            ptrIndicator.classList.remove('visible');
+        }
 		
-		isPulling = false;
-		touchStartY = 0;
-		touchMoveY = 0;
-	});
+        isPulling = false;
+        touchStartY = 0;
+        touchMoveY = 0;
+    });
 	
-	window.editarSaldo = async function(medioPago, moneda) {
-		// Forzamos la lectura fresca del servidor antes de pedir el número
-		await cargarMetricas(selectMesFiltro.value, true);
+    window.editarSaldo = async function(medioPago, moneda) {
+        await cargarMetricas(selectMesFiltro.value, true);
 
-		let saldoActual = 0;
-		if (medioPago === 'Tickets') {
-			saldoActual = saldoTicketsDisponibleNum || 0;
-		} else if (moneda === 'USD') {
-			saldoActual = balanceUSDNum || 0;
-		} else {
-			saldoActual = balanceUYUNum || 0;
-		}
+        let saldoActual = 0;
+        if (medioPago === 'Tickets') {
+            saldoActual = saldoTicketsDisponibleNum || 0;
+        } else if (moneda === 'USD') {
+            saldoActual = balanceUSDNum || 0;
+        } else {
+            saldoActual = balanceUYUNum || 0;
+        }
 
-		const simbolo = moneda === 'USD' ? 'US$' : '$';
-		const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+        const simbolo = moneda === 'USD' ? 'US$' : '$';
+        const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
 
-		const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
-						  `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
-						  `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
+        const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
+                          `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
+                          `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
 
-		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
-		if (nuevoSaldoStr === null) return;
+        const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
+        if (nuevoSaldoStr === null) return;
 
-		let valorLimpio = nuevoSaldoStr.trim();
-		if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
-			if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
-				valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
-			} else {
-				valorLimpio = valorLimpio.replace(/,/g, '');
-			}
-		} else if (valorLimpio.includes(',')) {
-			valorLimpio = valorLimpio.replace(',', '.');
-		}
+        let valorLimpio = nuevoSaldoStr.trim();
+        if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
+            if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
+                valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
+            } else {
+                valorLimpio = valorLimpio.replace(/,/g, '');
+            }
+        } else if (valorLimpio.includes(',')) {
+            valorLimpio = valorLimpio.replace(',', '.');
+        }
 
-		const nuevoSaldo = parseFloat(valorLimpio);
-		if (isNaN(nuevoSaldo)) {
-			alert("Por favor ingrese un número válido.");
-			return;
-		}
+        const nuevoSaldo = parseFloat(valorLimpio);
+        if (isNaN(nuevoSaldo)) {
+            alert("Por favor ingrese un número válido.");
+            return;
+        }
 
-		const diferencia = nuevoSaldo - saldoActual;
-		if (Math.abs(diferencia) < 0.01) {
-			alert("El saldo ingresado es igual al actual.");
-			return;
-		}
+        const diferencia = nuevoSaldo - saldoActual;
+        if (Math.abs(diferencia) < 0.01) {
+            alert("El saldo ingresado es igual al actual.");
+            return;
+        }
 
-		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
-		const montoAjuste = Math.abs(diferencia);
+        const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
+        const montoAjuste = Math.abs(diferencia);
 
-		// Alerta de seguridad si la diferencia es muy grande
-		if (montoAjuste > 10000) {
-			const superConfirmar = confirm(
-				`⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
-				`¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
-			);
-			if (!superConfirmar) return;
-		}
+        if (montoAjuste > 10000) {
+            const superConfirmar = confirm(
+                `⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
+                `¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
+            );
+            if (!superConfirmar) return;
+        }
 
-		const datosAjuste = {
-			concepto: "Ajuste de Saldo",
-			monto: montoAjuste,
-			moneda: moneda,
-			medio_pago: medioPago,
-			tipo: tipoAjuste,
-			prescindible: false,
-			nueva_categoria: "Ajuste"
-		};
+        const datosAjuste = {
+            concepto: "Ajuste de Saldo",
+            monto: montoAjuste,
+            moneda: moneda,
+            medio_pago: medioPago,
+            tipo: tipoAjuste,
+            prescindible: false,
+            nueva_categoria: "Ajuste"
+        };
 
-		try {
-			const res = await fetch('/registrar_gasto', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(datosAjuste)
-			});
+        try {
+            const res = await fetch('/registrar_gasto', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datosAjuste)
+            });
 
-			const resData = await res.json();
-			if (resData.status === 'success') {
-				alert(`Saldo ajustado correctamente en ${moneda}.`);
-				cargarMetricas(selectMesFiltro.value, true);
-			} else {
-				alert("Error ajustando saldo: " + resData.message);
-			}
-		} catch (e) {
-			alert("Error de conexión al ajustar saldo.");
-		}
-	};
-		// Forzamos la lectura fresca del servidor antes de pedir el número
-		await cargarMetricas(selectMesFiltro.value, true);
+            const resData = await res.json();
+            if (resData.status === 'success') {
+                alert(`Saldo ajustado correctamente en ${moneda}.`);
+                cargarMetricas(selectMesFiltro.value, true);
+            } else {
+                alert("Error ajustando saldo: " + resData.message);
+            }
+        } catch (e) {
+            alert("Error de conexión al ajustar saldo.");
+        }
+    };
 
-		let saldoActual = 0;
-		if (medioPago === 'Tickets') {
-			saldoActual = saldoTicketsDisponibleNum || 0;
-		} else if (moneda === 'USD') {
-			saldoActual = balanceUSDNum || 0;
-		} else {
-			saldoActual = balanceUYUNum || 0;
-		}
+    let conceptosCache = { pasivos: [], activos: [] };
 
-		const simbolo = moneda === 'USD' ? 'US$' : '$';
-		const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+    async function cargarConceptos() {
+        try {
+            const res = await fetch('/obtener_conceptos');
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.status === 'success') {
+                conceptosCache.pasivos = data.pasivos || [];
+                conceptosCache.activos = data.activos || [];
+                actualizarDatalist();
+            }
+        } catch (e) {
+            console.error("Error cargando lista de autocompletado", e);
+        }
+    }
 
-		const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
-						  `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
-						  `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
+    function actualizarDatalist() {
+        const datalist = document.getElementById('listaConceptosAuto');
+        if (!datalist) return;
+        
+        datalist.innerHTML = '';
+        const lista = (tipoActual === "Pasivo") ? conceptosCache.pasivos : conceptosCache.activos;
 
-		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
-		if (nuevoSaldoStr === null) return;
+        lista.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item;
+            datalist.appendChild(option);
+        });
+    }
 
-		let valorLimpio = nuevoSaldoStr.trim();
-		if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
-			if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
-				valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
-			} else {
-				valorLimpio = valorLimpio.replace(/,/g, '');
-			}
-		} else if (valorLimpio.includes(',')) {
-			valorLimpio = valorLimpio.replace(',', '.');
-		}
-
-		const nuevoSaldo = parseFloat(valorLimpio);
-		if (isNaN(nuevoSaldo)) {
-			alert("Por favor ingrese un número válido.");
-			return;
-		}
-
-		const diferencia = nuevoSaldo - saldoActual;
-		if (Math.abs(diferencia) < 0.01) {
-			alert("El saldo ingresado es igual al actual.");
-			return;
-		}
-
-		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
-		const montoAjuste = Math.abs(diferencia);
-
-		// Alerta de seguridad si la diferencia es muy grande
-		if (montoAjuste > 10000) {
-			const superConfirmar = confirm(
-				`⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
-				`¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
-			);
-			if (!superConfirmar) return;
-		}
-
-		const datosAjuste = {
-			concepto: "Ajuste de Saldo",
-			monto: montoAjuste,
-			moneda: moneda,
-			medio_pago: medioPago,
-			tipo: tipoAjuste,
-			prescindible: false,
-			nueva_categoria: "Ajuste"
-		};
-
-		try {
-			const res = await fetch('/registrar_gasto', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(datosAjuste)
-			});
-
-			const resData = await res.json();
-			if (resData.status === 'success') {
-				alert(`Saldo ajustado correctamente en ${moneda}.`);
-				cargarMetricas(selectMesFiltro.value, true);
-			} else {
-				alert("Error ajustando saldo: " + resData.message);
-			}
-		} catch (e) {
-			alert("Error de conexión al ajustar saldo.");
-		}
-	};
-	let conceptosCache = { pasivos: [], activos: [] };
-
-	async function cargarConceptos() {
-		try {
-			const res = await fetch('/obtener_conceptos');
-			if (!res.ok) return;
-			const data = await res.json();
-			if (data.status === 'success') {
-				conceptosCache.pasivos = data.pasivos;
-				conceptosCache.activos = data.activos;
-				actualizarDatalist();
-			}
-		} catch (e) {
-			console.error("Error cargando lista de autocompletado", e);
-		}
-	}
-
-	function actualizarDatalist() {
-		const datalist = document.getElementById('listaConceptosAuto');
-		if (!datalist) return;
-		
-		datalist.innerHTML = '';
-		const lista = (tipoActual === "Pasivo") ? conceptosCache.pasivos : conceptosCache.activos;
-
-		lista.forEach(item => {
-			const option = document.createElement('option');
-			option.value = item;
-			datalist.appendChild(option);
-		});
-	}
-
-	function desbloquearApp() {
+    function desbloquearApp() {
         pantallaPin.classList.add('hidden');
         contenidoApp.classList.remove('hidden');
-		cargarConceptos();
+        cargarConceptos();
     }
 
     function bloquearApp() {
@@ -401,7 +313,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ pin })
             });
 
-            if (res.ok) { desbloquearApp(); } else { mostrarMensajePin("PIN incorrecto"); }
+            if (res.ok) { 
+                desbloquearApp(); 
+            } else { 
+                mostrarMensajePin("PIN incorrecto"); 
+            }
         } catch (e) {
             mostrarMensajePin("Error de conexión");
         } finally {
@@ -426,7 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.addEventListener('click', toggleMenu);
 
     menuGasto.addEventListener('click', (e) => {
-		actualizarDatalist();
+        actualizarDatalist();
         e.preventDefault();
         tipoActual = "Pasivo";
         btnSubmit.textContent = "Registrar Gasto";
@@ -437,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     menuIngreso.addEventListener('click', (e) => {
-		actualizarDatalist();
+        actualizarDatalist();
         e.preventDefault();
         tipoActual = "Activo";
         btnSubmit.textContent = "Registrar Ingreso";
@@ -537,7 +453,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        // Totales Generales
         let sumUSD = 0;
         let sumUYU = 0;
         listaFiltrada.forEach(item => {
@@ -615,7 +530,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modalDetalle.classList.remove('hidden');
     }
 	
-	async function cargarMetricas(mesSeleccionado = '', force = false) {
+    async function cargarMetricas(mesSeleccionado = '', force = false) {
         try {
             let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
             if (force) {
@@ -627,26 +542,21 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const data = await res.json();
             if (data.status === 'success') {
-                
-                // GUARDAMOS LOS NÚMEROS REALES PARA AJUSTAR SALDOS
                 balanceUYUNum = data.balance_uyu_num || 0;
                 balanceUSDNum = data.balance_usd_num || 0;
                 saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
 
-                // SALDO TICKETS
                 const lblSaldoTickets = document.getElementById('lblSaldoTickets');
                 if (lblSaldoTickets) {
                     lblSaldoTickets.textContent = data.saldo_tickets_uyu;
                 }
 
-                // GAMIFICACIÓN: RACHA
                 const lblRachaDias = document.getElementById('lblRachaDias');
                 const racha = data.racha_dias || 0;
                 if (lblRachaDias) {
                     lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
                 }
 
-                // GAMIFICACIÓN: OBJETIVOS
                 document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
                 document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
                 document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
@@ -655,7 +565,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
                 document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
 
-                // BARRA
                 const pctUtilizado = data.pct_prescindible_utilizado || 0;
                 const fillBar = document.getElementById('barPrescindibleFill');
                 if (fillBar) {
@@ -668,7 +577,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // CONTROL DE FIJOS
                 const listaFijos = document.getElementById('listaFijos');
                 if (listaFijos) {
                     listaFijos.innerHTML = '';
@@ -706,7 +614,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 necesitaRecargarMetricas = false;
                 detallesTransaccionesCache = data.detalles || [];
 
-                // Contadores
                 const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
                 const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
                 const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
@@ -715,42 +622,32 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
                 document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
 
-                // Comparativas
                 document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
                 document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
 
-                // Disponible Hoy
                 document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
                 document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
 
-                // Banco
                 document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
                 document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
 
-                // Prescindible
                 document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
                 document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
-                // Ingresos
                 document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
                 document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
 
-                // Gastos
                 document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
                 document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
 
-                // Promedio Diario
                 document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
                 document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
-                // Tasa Ahorro
                 document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
                 document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
-                // Top Categoria
                 document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
-                // Desplegable de meses
                 selectMesFiltro.innerHTML = '';
                 data.meses_disponibles.forEach(mes => {
                     const opt = document.createElement('option');
@@ -766,7 +663,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (data.mes_actual === "TODOS") optTodos.selected = true;
                 selectMesFiltro.appendChild(optTodos);
 
-                // TOP ÍTEMS
                 const listaConceptosContainer = document.getElementById('listaConceptos');
                 if (listaConceptosContainer) {
                     listaConceptosContainer.innerHTML = '';
@@ -798,7 +694,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
 
-                // DESGLOSE POR CATEGORÍA
                 const listaContainer = document.getElementById('listaDesglose');
                 listaContainer.innerHTML = '';
 
@@ -855,7 +750,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const valorLimpio = montoInput.value.replace(',', '.').trim();
         const monto = parseFloat(valorLimpio);
 
-        // ✅ LEER DIRECTAMENTE EL RADIO SELECCIONADO EN PANTALLA
         const radioMonedaChecked = document.querySelector('input[name="monedaRadio"]:checked');
         const moneda = radioMonedaChecked ? radioMonedaChecked.value : 'UYU';
 
@@ -888,7 +782,7 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (data.status === 'success') {
                 mostrarMensaje(`Registrado correctamente`, 'success');
                 form.reset();
-				if (radioUYU) radioUYU.checked = true;
+                if (radioUYU) radioUYU.checked = true;
                 if (inputMoneda) inputMoneda.value = 'UYU';
                 chkPrescindible.checked = false;
                 radioBanco.checked = true;
