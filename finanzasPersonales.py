@@ -260,47 +260,58 @@ def es_pasivo(tipo):
 def coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
     c = str(concepto_r or '').lower().strip()
     f = str(fijo_nombre or '').upper().strip()
-    
-    # 1. CAMILA VISA: Exige "camila" Y "visa" para ignorar "Café Camila" o "Chupetines camila"
+
+    # Servicios básicos (Búsqueda por palabra completa \b)
+    if f == "UTE":
+        return re.search(r'\bute\b', c) is not None
+    if f == "OSE":
+        return re.search(r'\bose\b', c) is not None
+    if f == "ANTEL":
+        return re.search(r'\bantel\b', c) is not None
+
+    # Varios
+    if f == "PATENTE AUTO":
+        return "patente" in c
     if f == "CAMILA VISA":
         return "camila" in c and "visa" in c
-
-    # 2. Distinción de Pesos vs Dólares en tarjetas (solo si el concepto especifica la moneda)
-    if "PESOS" in f and ("dolar" in c or "usd" in c):
-        return False
-    if "DOLARES" in f and ("peso" in c or "uyu" in c):
-        return False
-
-    # 3. Coincidencias por servicio / préstamo
-    if f == "UTE":
-        return c == 'ute' or re.search(r'\bute\b', c) is not None
-    elif f == "OSE":
-        return c == 'ose' or re.search(r'\bose\b', c) is not None
-    elif f == "ANTEL":
-        return "antel" in c
-    elif f == "PATENTE AUTO":
-        return "patente" in c
-    elif f == "JIU-JITSU":
+    if f == "JIU-JITSU":
         return "jiu" in c or "jitsu" in c
-    elif f == "CHACRA CUOTA":
+    if f == "CHACRA CUOTA":
         return "chacra" in c
-    elif f == "PRESTAMO VW GOL":
-        return "gol" in c or ("prestamo" in c and "vw" in c)
-    elif f == "PRESTAMO ITAU":
+    if f == "PRESTAMO ITAU":
         return "prestamo" in c and "itau" in c
-    elif f == "PRESTAMO OCA":
-        return "prestamo" in c and "oca" in c
-    elif "BBVA" in f:
-        return "bbva" in c
-    elif "SANTANDER" in f:
-        return "santander" in c
-    elif "ITAU" in f:
-        return "itau" in c and "prestamo" not in c
-    elif "OCA" in f:
-        return "oca" in c and "prestamo" not in c
-    
-    return False
 
+    # Préstamo OCA (Exige palabra completa "oca" y la palabra "prestamo")
+    if f == "PRESTAMO OCA":
+        return "prestamo" in c and re.search(r'\boca\b', c) is not None
+
+    # Tarjetas BBVA
+    if "BBVA" in f:
+        if "PESOS" in f: return "bbva" in c and "dolar" not in c and moneda_r == "UYU"
+        if "DOLARES" in f: return "bbva" in c and ("dolar" in c or moneda_r == "USD")
+
+    # Tarjetas OCA (Usa \boca\b para ignorar Coca Cola)
+    if "TARJETA OCA" in f:
+        es_oca = re.search(r'\boca\b', c) is not None and "prestamo" not in c
+        if not es_oca:
+            return False
+        if "PESOS" in f:
+            return "pesos" in c or "tarjeta oca pesos" in c or (moneda_r == "UYU" and "dolar" not in c)
+        if "DOLARES" in f:
+            return "dolar" in c or "usd" in c or "tarjeta oca dolares" in c or moneda_r == "USD"
+
+    # Tarjetas Itaú
+    if "ITAU" in f and "PRESTAMO" not in f:
+        if "PESOS" in f: return "itau" in c and "prestamo" not in c and ("pesos" in c or moneda_r == "UYU")
+        if "DOLARES" in f: return "itau" in c and "prestamo" not in c and ("dolar" in c or moneda_r == "USD")
+
+    # Tarjetas Santander
+    if "SANTANDER" in f:
+        if "PESOS" in f: return "santander" in c and ("pesos" in c or moneda_r == "UYU")
+        if "DOLARES" in f: return "santander" in c and ("dolar" in c or moneda_r == "USD")
+
+    return False
+    
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
 def obtener_metricas():
@@ -579,26 +590,25 @@ def obtener_metricas():
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "PATENTE AUTO", "ANTEL", 
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
-            "PRESTAMO OCA", "PRESTAMO VW GOL", 
+            "PRESTAMO OCA", 
             "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
             "TARJETA ITAU PESOS", "TARJETA ITAU DOLARES", 
             "TARJETA SANTANDER PESOS", "TARJETA SANTANDER DOLARES", 
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
 
-        # CONTROL DE GASTOS FIJOS (REVISIÓN INTELIGENTE)
+       # CONTROL DE GASTOS FIJOS (CON DETECCIÓN DINÁMICA DE MONEDA)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
-            es_usd = "DOLARES" in fijo_nombre
-            moneda_fijo = "USD" if es_usd else "UYU"
-            monto_pagado = 0.0
+            monto_pagado_uyu = 0.0
+            monto_pagado_usd = 0.0
             fue_pagado = False
             
             for r in registros:
                 tipo_r = r.get('Tipo', '')
                 concepto_r = r.get('Concepto', '')
                 monto_r = float(r.get('Monto', 0) or 0)
-                moneda_r = r.get('Moneda', 'UYU')
+                moneda_r = normalizar_moneda(r.get('Moneda'))
                 mes_r = str(r.get('Mes', '')).strip().upper()
 
                 es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
@@ -606,12 +616,29 @@ def obtener_metricas():
                 if es_pasivo(tipo_r) and es_mes_valido:
                     if coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
                         fue_pagado = True
-                        monto_pagado += monto_r
+                        if moneda_r == 'USD':
+                            monto_pagado_usd += monto_r
+                        else:
+                            monto_pagado_uyu += monto_r
+
+            # Asigna la moneda según la transacción real efectuada
+            if monto_pagado_usd > 0 and monto_pagado_uyu == 0:
+                moneda_final = "USD"
+                monto_final = monto_pagado_usd
+            elif monto_pagado_uyu > 0 and monto_pagado_usd == 0:
+                moneda_final = "UYU"
+                monto_final = monto_pagado_uyu
+            elif monto_pagado_usd > 0 and monto_pagado_uyu > 0:
+                moneda_final = "USD" if "DOLARES" in fijo_nombre else "UYU"
+                monto_final = monto_pagado_usd if moneda_final == "USD" else monto_pagado_uyu
+            else:
+                moneda_final = "USD" if "DOLARES" in fijo_nombre else "UYU"
+                monto_final = 0.0
 
             detalles_fijos.append({
                 "concepto": fijo_nombre,
-                "moneda": moneda_fijo,
-                "monto_pagado": monto_pagado,
+                "moneda": moneda_final,
+                "monto_pagado": monto_final,
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
 
