@@ -174,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 	
 	window.editarSaldo = async function(medioPago, moneda) {
-		// 1. Forzamos actualización de métricas para no usar saldos viejos en caché
+		// Forzamos la lectura fresca del servidor antes de pedir el número
 		await cargarMetricas(selectMesFiltro.value, true);
 
 		let saldoActual = 0;
@@ -187,9 +187,11 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 
 		const simbolo = moneda === 'USD' ? 'US$' : '$';
-		const promptMsg = `ATENCIÓN: Estás ajustando la cuenta en ${moneda} (${medioPago}).\n\n` +
-						  `Saldo actual detectado: ${simbolo}${saldoActual.toFixed(2)}\n` +
-						  `Ingrese el nuevo saldo REAL TOTAL que tienes en el banco:`;
+		const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+
+		const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
+						  `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
+						  `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
 
 		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
 		if (nuevoSaldoStr === null) return;
@@ -220,14 +222,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
 		const montoAjuste = Math.abs(diferencia);
 
-		const confirmar = confirm(
-			`CONFIRMACIÓN DE AJUSTE (${moneda}):\n\n` +
-			`• Saldo Anterior: ${simbolo}${saldoActual.toFixed(2)}\n` +
-			`• Nuevo Saldo: ${simbolo}${nuevoSaldo.toFixed(2)}\n` +
-			`• Movimiento a crear: ${tipoAjuste} por ${simbolo}${montoAjuste.toFixed(2)}\n\n` +
-			`¿Confirmas este ajuste?`
-		);
-		if (!confirmar) return;
+		// Alerta de seguridad si la diferencia es muy grande
+		if (montoAjuste > 10000) {
+			const superConfirmar = confirm(
+				`⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
+				`¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
+			);
+			if (!superConfirmar) return;
+		}
 
 		const datosAjuste = {
 			concepto: "Ajuste de Saldo",
@@ -248,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 			const resData = await res.json();
 			if (resData.status === 'success') {
-				alert(`Saldo ajustado correctamente.`);
+				alert(`Saldo ajustado correctamente en ${moneda}.`);
 				cargarMetricas(selectMesFiltro.value, true);
 			} else {
 				alert("Error ajustando saldo: " + resData.message);
@@ -257,7 +259,91 @@ document.addEventListener("DOMContentLoaded", () => {
 			alert("Error de conexión al ajustar saldo.");
 		}
 	};
+		// Forzamos la lectura fresca del servidor antes de pedir el número
+		await cargarMetricas(selectMesFiltro.value, true);
 
+		let saldoActual = 0;
+		if (medioPago === 'Tickets') {
+			saldoActual = saldoTicketsDisponibleNum || 0;
+		} else if (moneda === 'USD') {
+			saldoActual = balanceUSDNum || 0;
+		} else {
+			saldoActual = balanceUYUNum || 0;
+		}
+
+		const simbolo = moneda === 'USD' ? 'US$' : '$';
+		const nombreMoneda = moneda === 'USD' ? 'DÓLARES (USD)' : 'PESOS (UYU)';
+
+		const promptMsg = `=== AJUSTAR CUENTA EN ${nombreMoneda} ===\n\n` +
+						  `Saldo actual en base de datos: ${simbolo}${saldoActual.toFixed(2)}\n\n` +
+						  `Escribe el nuevo saldo TOTAL REAL que tienes en ${moneda}:`;
+
+		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
+		if (nuevoSaldoStr === null) return;
+
+		let valorLimpio = nuevoSaldoStr.trim();
+		if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
+			if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
+				valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
+			} else {
+				valorLimpio = valorLimpio.replace(/,/g, '');
+			}
+		} else if (valorLimpio.includes(',')) {
+			valorLimpio = valorLimpio.replace(',', '.');
+		}
+
+		const nuevoSaldo = parseFloat(valorLimpio);
+		if (isNaN(nuevoSaldo)) {
+			alert("Por favor ingrese un número válido.");
+			return;
+		}
+
+		const diferencia = nuevoSaldo - saldoActual;
+		if (Math.abs(diferencia) < 0.01) {
+			alert("El saldo ingresado es igual al actual.");
+			return;
+		}
+
+		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
+		const montoAjuste = Math.abs(diferencia);
+
+		// Alerta de seguridad si la diferencia es muy grande
+		if (montoAjuste > 10000) {
+			const superConfirmar = confirm(
+				`⚠️ ATENCIÓN: Se va a crear un ajuste de ${simbolo}${montoAjuste.toFixed(2)} ${moneda}.\n\n` +
+				`¿Estás seguro de que quieres ajustar la cuenta de ${moneda}?`
+			);
+			if (!superConfirmar) return;
+		}
+
+		const datosAjuste = {
+			concepto: "Ajuste de Saldo",
+			monto: montoAjuste,
+			moneda: moneda,
+			medio_pago: medioPago,
+			tipo: tipoAjuste,
+			prescindible: false,
+			nueva_categoria: "Ajuste"
+		};
+
+		try {
+			const res = await fetch('/registrar_gasto', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(datosAjuste)
+			});
+
+			const resData = await res.json();
+			if (resData.status === 'success') {
+				alert(`Saldo ajustado correctamente en ${moneda}.`);
+				cargarMetricas(selectMesFiltro.value, true);
+			} else {
+				alert("Error ajustando saldo: " + resData.message);
+			}
+		} catch (e) {
+			alert("Error de conexión al ajustar saldo.");
+		}
+	};
 	let conceptosCache = { pasivos: [], activos: [] };
 
 	async function cargarConceptos() {
