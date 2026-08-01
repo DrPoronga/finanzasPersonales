@@ -215,7 +215,10 @@ def registrar_gasto():
                 })
 
         # Guardamos el medio_pago en la columna 10
-        hoja_transacciones.append_row([fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible, medio_pago])
+        hoja_transacciones.append_row(
+            [fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible, medio_pago],
+            value_input_option='RAW'
+        )
 
         invalidar_cache()
 
