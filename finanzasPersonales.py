@@ -242,11 +242,71 @@ def detectar_categoria(registros_cat, concepto_ingresado):
         
     return None
 
+import re
+
+# ==========================================
+# AYUDANTES DE NORMALIZACIÓN Y DETECCIÓN
+# ==========================================
+def normalizar_moneda(m):
+    m_str = str(m or '').strip().upper()
+    if m_str in ['USD', 'US$', 'DOLARES', 'DOLAR', 'U$S']:
+        return 'USD'
+    return 'UYU'
+
+def es_pasivo(tipo):
+    t = str(tipo or '').strip().lower()
+    return t not in ['activo', 'activos', 'ingreso', 'ingresos']
+
+def coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
+    c = str(concepto_r or '').lower().strip()
+    f = str(fijo_nombre or '').upper().strip()
+    m = normalizar_moneda(moneda_r)
+    
+    # Verificar moneda requerida según el nombre del gasto fijo
+    moneda_requerida = 'USD' if 'DOLARES' in f else 'UYU'
+    if m != moneda_requerida:
+        return False
+
+    # Reglas flexibles por palabra clave
+    if f == "UTE":
+        return re.search(r'\bute\b', c) is not None or c == 'ute'
+    elif f == "OSE":
+        return re.search(r'\bose\b', c) is not None or c == 'ose'
+    elif f == "ANTEL":
+        return "antel" in c
+    elif f == "PATENTE AUTO":
+        return "patente" in c
+    elif f == "CAMILA VISA":
+        return "camila" in c
+    elif f == "JIU-JITSU":
+        return "jiu" in c or "jitsu" in c
+    elif f == "CHACRA CUOTA":
+        return "chacra" in c
+    elif f == "PRESTAMO VW GOL":
+        return "gol" in c or ("prestamo" in c and "vw" in c)
+    elif f == "PRESTAMO ITAU":
+        return "prestamo" in c and "itau" in c
+    elif f == "PRESTAMO OCA":
+        return "prestamo" in c and "oca" in c
+    elif "BBVA" in f:
+        return "bbva" in c
+    elif "SANTANDER" in f:
+        return "santander" in c
+    elif "ITAU" in f:
+        return "itau" in c and "prestamo" not in c
+    elif "OCA" in f:
+        return "oca" in c and "prestamo" not in c
+    
+    # Fallback para otros conceptos
+    palabras_fijo = [p for p in f.lower().split() if p not in ['tarjeta', 'pesos', 'dolares', 'prestamo']]
+    return any(p in c for p in palabras_fijo if len(p) > 2)
+
+
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
 def obtener_metricas():
     try:
-        # Permite forzar la invalidación del caché si se solicita desde el cliente
+        # Permite forzar la invalidación del caché al hacer Pull to Refresh
         force_reload = request.args.get('force', 'false').lower() == 'true'
         if force_reload:
             invalidar_cache()
@@ -299,7 +359,7 @@ def obtener_metricas():
 
         for r in registros:
             monto = float(r.get('Monto', 0) or 0)
-            moneda = str(r.get('Moneda', 'UYU')).strip().upper() or 'UYU'
+            moneda = normalizar_moneda(r.get('Moneda'))
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
             concepto_raw = str(r.get('Concepto', '')).strip()
@@ -318,13 +378,13 @@ def obtener_metricas():
             es_prescindible = presc in ['Sí', 'Si', 'True']
             es_no_prescindible = not es_prescindible
 
-            if tipo == 'Pasivo' and es_prescindible and mes_registro:
+            if es_pasivo(tipo) and es_prescindible and mes_registro:
                 if moneda == 'USD':
                     prescindibles_historicos_usd[mes_registro] = prescindibles_historicos_usd.get(mes_registro, 0.0) + monto
                 else:
                     prescindibles_historicos_uyu[mes_registro] = prescindibles_historicos_uyu.get(mes_registro, 0.0) + monto
 
-            if tipo == 'Pasivo' and es_prescindible and fecha_str:
+            if es_pasivo(tipo) and es_prescindible and fecha_str:
                 try:
                     dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                     fechas_prescindibles.append(dt)
@@ -337,18 +397,18 @@ def obtener_metricas():
 
             # SEPARACIÓN BANCO VS TICKETS
             if medio_pago == 'Tickets':
-                if tipo == 'Activo': ingresos_tickets_uyu += monto
+                if not es_pasivo(tipo): ingresos_tickets_uyu += monto
                 else: gastos_tickets_uyu += monto
             else:
                 if moneda == 'USD':
-                    if tipo == 'Activo': ingresos_acum_usd += monto
+                    if not es_pasivo(tipo): ingresos_acum_usd += monto
                     else: gastos_acum_usd += monto
                 else:
-                    if tipo == 'Activo': ingresos_acum_uyu += monto
+                    if not es_pasivo(tipo): ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
 
-            # Pronóstico Fijos (excluye mes actual parcial del historial)
-            if medio_pago != 'Tickets' and tipo == 'Pasivo' and es_no_prescindible and mes_registro:
+            # Pronóstico Fijos (excluye el mes actual parcial)
+            if medio_pago != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro:
                 if mes_registro != mes_actual_nombre:
                     if cat not in historial_fijos[moneda]:
                         historial_fijos[moneda][cat] = {}
@@ -358,7 +418,7 @@ def obtener_metricas():
 
             # Comparativa Mes Anterior
             if mes_prev_nombre and mes_registro == mes_prev_nombre:
-                if tipo == 'Activo':
+                if not es_pasivo(tipo):
                     if moneda == 'USD': ingresos_prev_usd += monto
                     else: ingresos_prev_uyu += monto
                 else:
@@ -371,7 +431,7 @@ def obtener_metricas():
                 if fecha_str:
                     fechas_unicas_filtradas.add(fecha_str)
 
-                if tipo == 'Activo':
+                if not es_pasivo(tipo):
                     if moneda == 'USD': ingresos_filtrado_usd += monto
                     else: ingresos_filtrado_uyu += monto
                 else:
@@ -450,13 +510,12 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
-        # DISPONIBLE PARA HOY (Corregido a presupuesto disponible del mes actual)
+        # DISPONIBLE PARA HOY
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
-            dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
+            dias_totales_mes = calendar.monthrange(ahora.year, me_hora if 'me_hora' in locals() else me_hora if 'me_hora' in globals() else ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
-            # Presupuesto disponible = Ingresos del mes - Compromisos Pendientes - Gastos Ya Realizados
             neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
             neto_mes_restante_usd = max(0.0, ingresos_filtrado_usd - compromisos_pendientes_usd - gastos_filtrado_usd)
 
@@ -528,37 +587,32 @@ def obtener_metricas():
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
 
+        # CONTROL DE GASTOS FIJOS (REVISIÓN INTELIGENTE)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
-            nombre_lower = fijo_nombre.lower().strip()
             es_usd = "DOLARES" in fijo_nombre
-            moneda_esperada = "USD" if es_usd else "UYU"
-            
-            monto_pagado_uyu, monto_pagado_usd = 0.0, 0.0
+            moneda_fijo = "USD" if es_usd else "UYU"
+            monto_pagado = 0.0
             fue_pagado = False
             
             for r in registros:
-                tipo_r = str(r.get('Tipo', '')).strip().capitalize()
-                concepto_r = str(r.get('Concepto', '')).lower().strip()
+                tipo_r = r.get('Tipo', '')
+                concepto_r = r.get('Concepto', '')
                 monto_r = float(r.get('Monto', 0) or 0)
-                moneda_r = str(r.get('Moneda', 'UYU')).strip().upper()
+                moneda_r = r.get('Moneda', 'UYU')
                 mes_r = str(r.get('Mes', '')).strip().upper()
 
                 es_mes_valido = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
 
-                # Coincidencia con regex y filtro estricto de moneda
-                if tipo_r == 'Pasivo' and es_mes_valido and moneda_r == moneda_esperada:
-                    if re.search(r'\b' + re.escape(nombre_lower) + r'\b', concepto_r) or re.search(r'\b' + re.escape(concepto_r) + r'\b', nombre_lower):
+                if es_pasivo(tipo_r) and es_mes_valido:
+                    if coincide_gasto_fijo(fijo_nombre, concepto_r, moneda_r):
                         fue_pagado = True
-                        if moneda_r == 'USD': monto_pagado_usd += monto_r
-                        else: monto_pagado_uyu += monto_r
-
-            monto_final = monto_pagado_usd if es_usd else monto_pagado_uyu
+                        monto_pagado += monto_r
 
             detalles_fijos.append({
                 "concepto": fijo_nombre,
-                "moneda": moneda_esperada,
-                "monto_pagado": monto_final,
+                "moneda": moneda_fijo,
+                "monto_pagado": monto_pagado,
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
 
@@ -606,6 +660,6 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-      
+        
 if __name__ == '__main__':
     app.run(debug=True)
