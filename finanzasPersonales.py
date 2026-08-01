@@ -195,7 +195,12 @@ def registrar_gasto():
 
         if nueva_categoria:
             categoria = nueva_categoria
-            hoja_categorias.append_row([concepto.lower(), categoria, tipo])
+            _, registros_cat = obtener_registros_cached()
+            
+            ya_existe = any(str(r.get('Palabra Clave', '')).lower().strip() == concepto.lower() for r in registros_cat)
+            
+            if not ya_existe:
+                hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
             _, registros_cat = obtener_registros_cached()
             categoria = detectar_categoria(registros_cat, concepto)
