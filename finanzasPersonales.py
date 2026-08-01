@@ -349,6 +349,37 @@ def obtener_metricas():
             if medio_pago not in ['Banco', 'Tickets']:
                 medio_pago = 'Banco'
 
+            es_ajuste = (cat.upper() == "AJUSTE") or ("AJUSTE DE SALDO" in concepto_raw.upper())
+
+            if es_mes_valido:
+                if fecha_str:
+                    fechas_unicas_filtradas.add(fecha_str)
+
+                if not es_pasivo(tipo):
+                    if moneda == 'USD': ingresos_filtrado_usd += monto
+                    else: ingresos_filtrado_uyu += monto
+                else:
+                    if moneda == 'USD':
+                        gastos_filtrado_usd += monto
+                        if es_prescindible: prescindible_filtrado_usd += monto
+                        # SOLO sumamos al desglose si NO es un ajuste de saldo
+                        if not es_ajuste:
+                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
+                            conc_key = concepto_raw.title()
+                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
+                            gastos_por_categoria[cat]['USD'] += monto
+                            gastos_por_concepto_especifico[conc_key]['USD'] += monto
+                    else:
+                        gastos_filtrado_uyu += monto
+                        if es_prescindible: prescindible_filtrado_uyu += monto
+                        # SOLO sumamos al desglose si NO es un ajuste de saldo
+                        if not es_ajuste:
+                            if cat not in gastos_por_categoria: gastos_por_categoria[cat] = {'USD': 0.0, 'UYU': 0.0}
+                            conc_key = concepto_raw.title()
+                            if conc_key not in gastos_por_concepto_especifico: gastos_por_concepto_especifico[conc_key] = {'USD': 0.0, 'UYU': 0.0, 'categoria': cat}
+                            gastos_por_categoria[cat]['UYU'] += monto
+                            gastos_por_concepto_especifico[conc_key]['UYU'] += monto
+                            
             if mes_registro:
                 meses_encontrados.add(mes_registro)
 
@@ -622,6 +653,8 @@ def obtener_metricas():
         return jsonify({
             "status": "success",
             "mes_actual": mes_solicitado,
+            "balance_uyu_num": balance_real_uyu,
+            "balance_usd_num": balance_real_usd,
             "meses_disponibles": meses_ordenados,
             "racha_dias": racha_dias,
             "saldo_tickets_uyu": f"${saldo_tickets_uyu:,.0f}",

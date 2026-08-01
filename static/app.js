@@ -57,12 +57,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const resumenModalDetalle = document.getElementById('resumenModalDetalle');
     const listaModalDetalle = document.getElementById('listaModalDetalle');
 
+	let balanceUYUNum = 0;
+	let balanceUSDNum = 0;
+	let saldoTicketsDisponibleNum = 0;
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
     let detallesTransaccionesCache = [];
     let gastosFijosCache = [];
-    let saldoTicketsDisponibleNum = 0;
     const cardFijos = document.getElementById('cardFijos');
 
     checkAutenticacion();
@@ -172,66 +174,83 @@ document.addEventListener("DOMContentLoaded", () => {
 	});
 	
 	window.editarSaldo = async function(medioPago, moneda) {
-    let saldoActual = 0;
+		let saldoActual = 0;
 
-    if (medioPago === 'Tickets') {
-        saldoActual = saldoTicketsDisponibleNum || 0;
-    } else {
-        // Obtenemos el saldo numérico actual del banco desde el DOM o caché
-        const elemStr = (moneda === 'USD') 
-            ? document.getElementById('lblBalanceUSD').textContent 
-            : document.getElementById('lblBalanceUYU').textContent;
-        saldoActual = parseFloat(elemStr.replace(/[^0-9.-]+/g, "")) || 0;
-    }
+		if (medioPago === 'Tickets') {
+			saldoActual = saldoTicketsDisponibleNum || 0;
+		} else if (moneda === 'USD') {
+			saldoActual = balanceUSDNum || 0;
+		} else {
+			saldoActual = balanceUYUNum || 0;
+		}
 
-    const nuevoSaldoStr = prompt(`Ingrese el nuevo saldo real para ${medioPago} (${moneda}):`, saldoActual);
-    if (nuevoSaldoStr === null) return; // Cancelado por el usuario
+		const promptMsg = `Ingrese el nuevo saldo real para ${medioPago} (${moneda}):\n(Saldo actual registrado: ${saldoActual.toFixed(2)})`;
+		const nuevoSaldoStr = prompt(promptMsg, saldoActual.toFixed(2));
+		if (nuevoSaldoStr === null) return;
 
-    const nuevoSaldo = parseFloat(nuevoSaldoStr.replace(',', '.'));
-    if (isNaN(nuevoSaldo)) {
-        alert("Por favor ingrese un número válido.");
-        return;
-    }
+		// Normalización inteligente de comas y puntos
+		let valorLimpio = nuevoSaldoStr.trim();
+		if (valorLimpio.includes('.') && valorLimpio.includes(',')) {
+			if (valorLimpio.lastIndexOf(',') > valorLimpio.lastIndexOf('.')) {
+				// Formato 1.250,50
+				valorLimpio = valorLimpio.replace(/\./g, '').replace(',', '.');
+			} else {
+				// Formato 1,250.50
+				valorLimpio = valorLimpio.replace(/,/g, '');
+			}
+		} else if (valorLimpio.includes(',')) {
+			valorLimpio = valorLimpio.replace(',', '.');
+		}
 
-    const diferencia = nuevoSaldo - saldoActual;
-    if (Math.abs(diferencia) < 0.01) {
-        alert("El saldo ingresado es igual al actual.");
-        return;
-    }
+		const nuevoSaldo = parseFloat(valorLimpio);
+		if (isNaN(nuevoSaldo)) {
+			alert("Por favor ingrese un número válido.");
+			return;
+		}
 
-    // Definimos si es ingreso o gasto de ajuste
-    const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
-    const montoAjuste = Math.abs(diferencia);
+		const diferencia = nuevoSaldo - saldoActual;
+		if (Math.abs(diferencia) < 0.01) {
+			alert("El saldo ingresado es igual al actual.");
+			return;
+		}
 
-    const datosAjuste = {
-        concepto: "Ajuste de Saldo",
-        monto: montoAjuste,
-        moneda: moneda,
-        medio_pago: medioPago,
-        tipo: tipoAjuste,
-        prescindible: false,
-        nueva_categoria: "Ajuste"
-    };
+		const tipoAjuste = diferencia > 0 ? "Activo" : "Pasivo";
+		const montoAjuste = Math.abs(diferencia);
 
-    try {
-        const res = await fetch('/registrar_gasto', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datosAjuste)
-        });
+		// Cartel de confirmación previo para evitar sustos
+		const confirmar = confirm(
+			`Se creará un ${tipoAjuste} por $${montoAjuste.toFixed(2)} ${moneda} para ajustar el saldo de $${saldoActual.toFixed(2)} a $${nuevoSaldo.toFixed(2)}.\n\n¿Deseas guardar el ajuste?`
+		);
+		if (!confirmar) return;
 
-        const resData = await res.json();
-        if (resData.status === 'success') {
-            alert(`Saldo ajustado con éxito mediante un movimiento de ${tipoAjuste} por ${montoAjuste.toFixed(2)} ${moneda}.`);
-            cargarMetricas(selectMesFiltro.value, true);
-            cargarConceptos();
-        } else {
-            alert("Error ajustando saldo: " + resData.message);
-        }
-    } catch (e) {
-        alert("Error de conexión al ajustar saldo.");
-    }
-};
+		const datosAjuste = {
+			concepto: "Ajuste de Saldo",
+			monto: montoAjuste,
+			moneda: moneda,
+			medio_pago: medioPago,
+			tipo: tipoAjuste,
+			prescindible: false,
+			nueva_categoria: "Ajuste"
+		};
+
+		try {
+			const res = await fetch('/registrar_gasto', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(datosAjuste)
+			});
+
+			const resData = await res.json();
+			if (resData.status === 'success') {
+				alert(`Saldo ajustado correctamente.`);
+				cargarMetricas(selectMesFiltro.value, true);
+			} else {
+				alert("Error ajustando saldo: " + resData.message);
+			}
+		} catch (e) {
+			alert("Error de conexión al ajustar saldo.");
+		}
+	};
 	
 	let conceptosCache = { pasivos: [], activos: [] };
 
@@ -264,29 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	// Llama a cargarConceptos() dentro de checkAutenticacion() o al desbloquear la App:
-	// desbloquearApp() -> cargarConceptos();
-	// Modifica el encabezado de tu función cargarMetricas para recibir el parámetro 'force':
-	async function cargarMetricas(mesSeleccionado = '', force = false) {
-		try {
-			let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
-			if (force) {
-				url += (url.includes('?') ? '&' : '?') + 'force=true';
-			}
-
-			const res = await fetch(url);
-			if (res.status === 401) { bloquearApp(); return; }
-			
-			const data = await res.json();
-			if (data.status === 'success') {
-				// ... (Conserva todo el código interno que ya tenías asignando los datos) ...
-			}
-		} catch (error) {
-			console.error("Error cargando métricas", error);
-		}
-	}
-
-    function desbloquearApp() {
+	function desbloquearApp() {
         pantallaPin.classList.add('hidden');
         contenidoApp.classList.remove('hidden');
     }
@@ -384,17 +381,166 @@ document.addEventListener("DOMContentLoaded", () => {
         elementoActivo.classList.add('active');
     }
 
-    async function cargarMetricas(mesSeleccionado = '') {
+    function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
+        let listaFiltrada = [];
+        let titulo = '';
+
+        if (filtroTipo === 'prescindibles') {
+            titulo = 'Gastos Prescindibles';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true);
+        } else if (filtroTipo === 'ingresos') {
+            titulo = 'Detalle de Ingresos';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Activo');
+        } else if (filtroTipo === 'gastos') {
+            titulo = 'Detalle de Gastos';
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo');
+        } else if (filtroTipo === 'categoria') {
+            titulo = `Gastos en ${categoriaNombre}`;
+            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.categoria === categoriaNombre);
+        } else if (filtroTipo === 'fijos') {
+            titulo = 'Control de Gastos Fijos';
+        }
+
+        tituloModalDetalle.textContent = titulo;
+
+        if (filtroTipo === 'fijos') {
+            const pend = gastosFijosCache.filter(f => f.estado === 'Pendiente').length;
+            const pag = gastosFijosCache.filter(f => f.estado === 'Pagado').length;
+
+            resumenModalDetalle.innerHTML = `
+                <div>Pendientes: <span>${pend}</span></div>
+                <div>Pagados: <span>${pag}</span></div>
+            `;
+
+            listaModalDetalle.innerHTML = '';
+            gastosFijosCache.forEach(fijo => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'detalle-item';
+
+                const esPagado = fijo.estado === 'Pagado';
+                const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+
+                const textoSub = esPagado 
+                    ? `Pagado: ${montoFmt}` 
+                    : `Pendiente de pago`;
+
+                itemDiv.innerHTML = `
+                    <div class="detalle-info">
+                        <span class="detalle-concepto">${fijo.concepto}</span>
+                        <div class="detalle-sub">
+                            <span>${textoSub}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
+                    </div>
+                `;
+                listaModalDetalle.appendChild(itemDiv);
+            });
+
+            modalDetalle.classList.remove('hidden');
+            return;
+        }
+
+        // Totales Generales
+        let sumUSD = 0;
+        let sumUYU = 0;
+        listaFiltrada.forEach(item => {
+            if (item.moneda === 'USD') sumUSD += item.monto;
+            else sumUYU += item.monto;
+        });
+
+        let resumenHtml = '';
+        if (sumUYU > 0) resumenHtml += `<div>UYU: <span>$${sumUYU.toLocaleString('es-UY', {maximumFractionDigits: 0})}</span></div>`;
+        if (sumUSD > 0) resumenHtml += `<div>USD: <span>US$${sumUSD.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`;
+        if (sumUSD === 0 && sumUYU === 0) resumenHtml = '<div>Sin movimientos registrados</div>';
+
+        resumenModalDetalle.innerHTML = resumenHtml;
+        listaModalDetalle.innerHTML = '';
+
+        if (filtroTipo === 'categoria' && listaFiltrada.length > 0) {
+            const agrupado = {};
+            listaFiltrada.forEach(item => {
+                const conc = item.concepto.trim();
+                if (!agrupado[conc]) agrupado[conc] = { uyu: 0, usd: 0 };
+                if (item.moneda === 'USD') agrupado[conc].usd += item.monto;
+                else agrupado[conc].uyu += item.monto;
+            });
+
+            const subBox = document.createElement('div');
+            subBox.className = 'subdesglose-box';
+            let subHtml = '<strong style="display:block; margin-bottom: 6px; font-size:12px; color:var(--subtext);">TOTALES POR ÍTEM:</strong>';
+
+            Object.keys(agrupado).sort((a,b) => agrupado[b].uyu - agrupado[a].uyu).forEach(conc => {
+                const mUYU = agrupado[conc].uyu > 0 ? `$${agrupado[conc].uyu.toLocaleString('es-UY', {maximumFractionDigits:0})}` : '';
+                const mUSD = agrupado[conc].usd > 0 ? `US$${agrupado[conc].usd.toLocaleString('en-US', {minimumFractionDigits:2})}` : '';
+                const mFmt = [mUYU, mUSD].filter(Boolean).join(' / ');
+                subHtml += `<div class="subdesglose-row"><span>${conc}</span><strong>${mFmt}</strong></div>`;
+            });
+
+            subBox.innerHTML = subHtml;
+            listaModalDetalle.appendChild(subBox);
+        }
+
+        if (listaFiltrada.length === 0) {
+            listaModalDetalle.innerHTML = '<div style="color: var(--subtext); text-align: center; padding: 20px;">No hay registros para este filtro.</div>';
+        } else {
+            listaFiltrada.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'detalle-item';
+
+                const esActivo = item.tipo === 'Activo';
+                const signo = esActivo ? '+' : '-';
+                const formatoMonto = item.moneda === 'USD' 
+                    ? `${signo}US$${item.monto.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+                    : `${signo}$${item.monto.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+
+                const badgePrescindible = item.prescindible ? '<span class="badge-prescindible">Prescindible</span>' : '';
+                const medioPagoTag = item.medio_pago === 'Tickets' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">Tickets</span>' : '';
+                const fechaTexto = `${item.fecha} ${item.hora}`;
+
+                itemDiv.innerHTML = `
+                    <div class="detalle-info">
+                        <span class="detalle-concepto">${item.concepto}</span>
+                        <div class="detalle-sub">
+                            <span>${fechaTexto}</span> • 
+                            <span>${item.categoria}</span>
+                            ${medioPagoTag}
+                            ${badgePrescindible}
+                        </div>
+                    </div>
+                    <div class="detalle-monto ${esActivo ? 'monto-activo' : 'monto-pasivo'}">
+                        ${formatoMonto}
+                    </div>
+                `;
+                listaModalDetalle.appendChild(itemDiv);
+            });
+        }
+
+        modalDetalle.classList.remove('hidden');
+    }
+	
+	async function cargarMetricas(mesSeleccionado = '', force = false) {
         try {
-            const url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+            let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+            if (force) {
+                url += (url.includes('?') ? '&' : '?') + 'force=true';
+            }
+
             const res = await fetch(url);
             if (res.status === 401) { bloquearApp(); return; }
             
             const data = await res.json();
             if (data.status === 'success') {
                 
-                // SALDO TICKETS
+                // GUARDAMOS LOS NÚMEROS REALES PARA AJUSTAR SALDOS
+                balanceUYUNum = data.balance_uyu_num || 0;
+                balanceUSDNum = data.balance_usd_num || 0;
                 saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
+
+                // SALDO TICKETS
                 const lblSaldoTickets = document.getElementById('lblSaldoTickets');
                 if (lblSaldoTickets) {
                     lblSaldoTickets.textContent = data.saldo_tickets_uyu;
@@ -597,148 +743,7 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error cargando métricas", error);
         }
     }
-
-    function abrirModalDetalles(filtroTipo, categoriaNombre = '') {
-        let listaFiltrada = [];
-        let titulo = '';
-
-        if (filtroTipo === 'prescindibles') {
-            titulo = 'Gastos Prescindibles';
-            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true);
-        } else if (filtroTipo === 'ingresos') {
-            titulo = 'Detalle de Ingresos';
-            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Activo');
-        } else if (filtroTipo === 'gastos') {
-            titulo = 'Detalle de Gastos';
-            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo');
-        } else if (filtroTipo === 'categoria') {
-            titulo = `Gastos en ${categoriaNombre}`;
-            listaFiltrada = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.categoria === categoriaNombre);
-        } else if (filtroTipo === 'fijos') {
-            titulo = 'Control de Gastos Fijos';
-        }
-
-        tituloModalDetalle.textContent = titulo;
-
-        if (filtroTipo === 'fijos') {
-            const pend = gastosFijosCache.filter(f => f.estado === 'Pendiente').length;
-            const pag = gastosFijosCache.filter(f => f.estado === 'Pagado').length;
-
-            resumenModalDetalle.innerHTML = `
-                <div>Pendientes: <span>${pend}</span></div>
-                <div>Pagados: <span>${pag}</span></div>
-            `;
-
-            listaModalDetalle.innerHTML = '';
-            gastosFijosCache.forEach(fijo => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'detalle-item';
-
-                const esPagado = fijo.estado === 'Pagado';
-                const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
-                const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
-                const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
-
-                const textoSub = esPagado 
-                    ? `Pagado: ${montoFmt}` 
-                    : `Pendiente de pago`;
-
-                itemDiv.innerHTML = `
-                    <div class="detalle-info">
-                        <span class="detalle-concepto">${fijo.concepto}</span>
-                        <div class="detalle-sub">
-                            <span>${textoSub}</span>
-                        </div>
-                    </div>
-                    <div style="text-align: right;">
-                        <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
-                    </div>
-                `;
-                listaModalDetalle.appendChild(itemDiv);
-            });
-
-            modalDetalle.classList.remove('hidden');
-            return;
-        }
-
-        // Totales Generales
-        let sumUSD = 0;
-        let sumUYU = 0;
-        listaFiltrada.forEach(item => {
-            if (item.moneda === 'USD') sumUSD += item.monto;
-            else sumUYU += item.monto;
-        });
-
-        let resumenHtml = '';
-        if (sumUYU > 0) resumenHtml += `<div>UYU: <span>$${sumUYU.toLocaleString('es-UY', {maximumFractionDigits: 0})}</span></div>`;
-        if (sumUSD > 0) resumenHtml += `<div>USD: <span>US$${sumUSD.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`;
-        if (sumUSD === 0 && sumUYU === 0) resumenHtml = '<div>Sin movimientos registrados</div>';
-
-        resumenModalDetalle.innerHTML = resumenHtml;
-        listaModalDetalle.innerHTML = '';
-
-        if (filtroTipo === 'categoria' && listaFiltrada.length > 0) {
-            const agrupado = {};
-            listaFiltrada.forEach(item => {
-                const conc = item.concepto.trim();
-                if (!agrupado[conc]) agrupado[conc] = { uyu: 0, usd: 0 };
-                if (item.moneda === 'USD') agrupado[conc].usd += item.monto;
-                else agrupado[conc].uyu += item.monto;
-            });
-
-            const subBox = document.createElement('div');
-            subBox.className = 'subdesglose-box';
-            let subHtml = '<strong style="display:block; margin-bottom: 6px; font-size:12px; color:var(--subtext);">TOTALES POR ÍTEM:</strong>';
-
-            Object.keys(agrupado).sort((a,b) => agrupado[b].uyu - agrupado[a].uyu).forEach(conc => {
-                const mUYU = agrupado[conc].uyu > 0 ? `$${agrupado[conc].uyu.toLocaleString('es-UY', {maximumFractionDigits:0})}` : '';
-                const mUSD = agrupado[conc].usd > 0 ? `US$${agrupado[conc].usd.toLocaleString('en-US', {minimumFractionDigits:2})}` : '';
-                const mFmt = [mUYU, mUSD].filter(Boolean).join(' / ');
-                subHtml += `<div class="subdesglose-row"><span>${conc}</span><strong>${mFmt}</strong></div>`;
-            });
-
-            subBox.innerHTML = subHtml;
-            listaModalDetalle.appendChild(subBox);
-        }
-
-        if (listaFiltrada.length === 0) {
-            listaModalDetalle.innerHTML = '<div style="color: var(--subtext); text-align: center; padding: 20px;">No hay registros para este filtro.</div>';
-        } else {
-            listaFiltrada.forEach(item => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'detalle-item';
-
-                const esActivo = item.tipo === 'Activo';
-                const signo = esActivo ? '+' : '-';
-                const formatoMonto = item.moneda === 'USD' 
-                    ? `${signo}US$${item.monto.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
-                    : `${signo}$${item.monto.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
-
-                const badgePrescindible = item.prescindible ? '<span class="badge-prescindible">Prescindible</span>' : '';
-                const medioPagoTag = item.medio_pago === 'Tickets' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">Tickets</span>' : '';
-                const fechaTexto = `${item.fecha} ${item.hora}`;
-
-                itemDiv.innerHTML = `
-                    <div class="detalle-info">
-                        <span class="detalle-concepto">${item.concepto}</span>
-                        <div class="detalle-sub">
-                            <span>${fechaTexto}</span> • 
-                            <span>${item.categoria}</span>
-                            ${medioPagoTag}
-                            ${badgePrescindible}
-                        </div>
-                    </div>
-                    <div class="detalle-monto ${esActivo ? 'monto-activo' : 'monto-pasivo'}">
-                        ${formatoMonto}
-                    </div>
-                `;
-                listaModalDetalle.appendChild(itemDiv);
-            });
-        }
-
-        modalDetalle.classList.remove('hidden');
-    }
-
+	
     // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
     cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });
