@@ -337,7 +337,11 @@ def obtener_metricas():
         inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
 
         for r in registros:
-            monto = float(r.get('Monto', 0) or 0)
+            try:
+                monto_raw = str(r.get('Monto', 0)).replace(',', '.').strip()
+                monto = float(monto_raw) if monto_raw else 0.0
+            except (ValueError, TypeError):
+                monto = 0.0
             moneda = normalizar_moneda(r.get('Moneda'))
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
