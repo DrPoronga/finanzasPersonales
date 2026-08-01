@@ -554,13 +554,7 @@ def obtener_metricas():
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
         
-        ALIAS_EXACTOS = {
-            "PATENTE AUTO": ["PATENTE"],
-            "CHACRA CUOTA": ["CHACRA"],
-            "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
-            "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
-        }
-
+        
       # CONTROL DE GASTOS FIJOS (COINCIDENCIA ESTRICTA)
         detalles_fijos = []
         for fijo_nombre in GASTOS_FIJOS_DECLARADOS:
