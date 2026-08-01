@@ -154,21 +154,21 @@
 
                 <!-- BANCO -->
                 <div class="card balance-card">
-					<div style="display: flex; justify-content: space-between; align-items: center;">
-						<h3>Dinero en el banco</h3>
-						<div>
-							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'UYU')" title="Ajustar Pesos">✏️ UYU</button>
-							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'USD')" title="Ajustar Dólares">✏️ USD</button>
-						</div>
-					</div>
+					<h3>Dinero en el banco</h3>
 					<div class="monto-group">
-						<div class="monto-row">
-							<span class="badge">UYU</span>
-							<span id="lblBalanceUYU" class="monto-num">$0</span>
+						<div class="monto-row" style="justify-content: space-between;">
+							<div style="display: flex; align-items: center; gap: 12px;">
+								<span class="badge">UYU</span>
+								<span id="lblBalanceUYU" class="monto-num">$0</span>
+							</div>
+							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'UYU')" title="Ajustar Pesos">✏️ Editar Pesos</button>
 						</div>
-						<div class="monto-row">
-							<span class="badge">USD</span>
-							<span id="lblBalanceUSD" class="monto-num">US$0</span>
+						<div class="monto-row" style="justify-content: space-between;">
+							<div style="display: flex; align-items: center; gap: 12px;">
+								<span class="badge">USD</span>
+								<span id="lblBalanceUSD" class="monto-num">US$0</span>
+							</div>
+							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'USD')" title="Ajustar Dólares">✏️ Editar Dólares</button>
 						</div>
 					</div>
 				</div>
