@@ -171,10 +171,17 @@ def registrar_gasto():
     if tipo_ingresado not in ['Activo', 'Pasivo']:
         return jsonify({"status": "error", "message": "Tipo no válido."}), 400
 
-    # Nuevo: Medio de pago (Banco vs Tickets)
+    # Soporte para Tarjetas y Cuotas
     medio_pago = str(datos.get('medio_pago', 'Banco')).strip().capitalize()
-    if medio_pago not in ['Banco', 'Tickets']:
+    if medio_pago not in ['Banco', 'Tickets', 'Tarjeta']:
         medio_pago = 'Banco'
+
+    tarjeta_nombre = str(datos.get('tarjeta', '')).strip()
+    try:
+        cuotas = int(datos.get('cuotas', 1))
+        if cuotas < 1: cuotas = 1
+    except ValueError:
+        cuotas = 1
 
     prescindible = "Sí" if datos.get('prescindible', False) else "No"
     nueva_categoria = datos.get('nueva_categoria')
@@ -183,8 +190,7 @@ def registrar_gasto():
 
     ahora = datetime.now()
     fecha_hoy = ahora.strftime("%d/%m/%Y")
-    hora_actual = me_hora = ahora.strftime("%H:%M")
-    nombre_mes = MESES[ahora.month]
+    hora_actual = ahora.strftime("%H:%M")
 
     try:
         doc = conectar_google_sheets()
@@ -196,7 +202,6 @@ def registrar_gasto():
         if nueva_categoria:
             categoria = nueva_categoria
             _, registros_cat = obtener_registros_cached()
-            
             ya_existe = any(str(r.get('Palabra Clave', '')).lower().strip() == concepto.lower() for r in registros_cat)
             
             if not ya_existe:
@@ -214,11 +219,40 @@ def registrar_gasto():
                     "categorias": categorias_unicas
                 })
 
-        # Guardamos el medio_pago en la columna 10
-        hoja_transacciones.append_row(
-            [fecha_hoy, hora_actual, concepto, monto, moneda, categoria, nombre_mes, tipo, prescindible, medio_pago],
-            value_input_option='RAW'
-        )
+        # ==========================================
+        # LÓGICA DE DIVISION EN CUOTAS HACIA EL FUTURO
+        # ==========================================
+        medio_pago_final = f"Tarjeta - {tarjeta_nombre}" if medio_pago == 'Tarjeta' else medio_pago
+
+        if medio_pago == 'Tarjeta' and cuotas > 1:
+            monto_por_cuota = monto / cuotas
+            mes_actual_num = ahora.month
+            
+            filas_a_insertar = []
+            for i in range(1, cuotas + 1):
+                # Calculamos el mes saltando hacia adelante, si pasa de diciembre vuelve a enero
+                mes_cuota_num = ((mes_actual_num + i - 2) % 12) + 1
+                nombre_mes_cuota = MESES[mes_cuota_num]
+                
+                concepto_cuota = f"{concepto} (Cuota {i} de {cuotas})"
+                
+                filas_a_insertar.append([
+                    fecha_hoy, hora_actual, concepto_cuota, monto_por_cuota, 
+                    moneda, categoria, nombre_mes_cuota, tipo, prescindible, medio_pago_final
+                ])
+                
+            # Insertamos todas las cuotas de golpe en la hoja
+            hoja_transacciones.append_rows(filas_a_insertar, value_input_option='RAW')
+            
+        else:
+            # Gasto normal o tarjeta en 1 pago
+            nombre_mes = MESES[ahora.month]
+            concepto_final = f"{concepto} (1 pago)" if medio_pago == 'Tarjeta' else concepto
+            
+            hoja_transacciones.append_row(
+                [fecha_hoy, hora_actual, concepto_final, monto, moneda, categoria, nombre_mes, tipo, prescindible, medio_pago_final],
+                value_input_option='RAW'
+            )
 
         invalidar_cache()
 
@@ -230,11 +264,12 @@ def registrar_gasto():
         })
 
     except Exception as e:
+        import traceback
         traceback.print_exc()
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-
+        
 import re  # <-- Asegúrate de incluir esta importación al principio del archivo
 
 def detectar_categoria(registros_cat, concepto_ingresado):

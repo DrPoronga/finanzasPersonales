@@ -242,11 +242,10 @@ button:hover { background-color: var(--primary-hover); }
     color: var(--text);
 }
 
-.toggle-slider, .toggle-slider-pago {
+/* Deslizadores arreglados para 3 opciones */
+.toggle-slider {
     position: absolute;
-    top: 4px;
-    bottom: 4px;
-    left: 4px;
+    top: 4px; bottom: 4px; left: 4px;
     width: calc(50% - 4px);
     background: var(--surface);
     border-radius: 10px;
@@ -255,9 +254,31 @@ button:hover { background-color: var(--primary-hover); }
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider,
+.toggle-slider-pago {
+    position: absolute;
+    top: 4px; bottom: 4px; left: 4px;
+    width: calc(33.333% - 4px); /* Ajustado para 3 botones */
+    background: var(--surface);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 1;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider {
+    transform: translateX(100%);
+}
+
+.payment-toggle input[type="radio"]:nth-of-type(1):checked ~ .toggle-slider-pago {
+    transform: translateX(0);
+}
+
 .payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider-pago {
     transform: translateX(100%);
+}
+
+.payment-toggle input[type="radio"]:nth-of-type(3):checked ~ .toggle-slider-pago {
+    transform: translateX(200%);
 }
 
 .tickets-status-msg {

@@ -35,6 +35,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const radioBanco = document.getElementById('pagoBanco');
     const radioTickets = document.getElementById('pagoTickets');
     const msgTicketsStatus = document.getElementById('msgTicketsStatus');
+	const radioTarjeta = document.getElementById('pagoTarjeta');
+    const containerTarjeta = document.getElementById('containerTarjeta');
+    const selectTarjeta = document.getElementById('selectTarjeta');
+    const inputCuotas = document.getElementById('inputCuotas');
 
     // Métricas
     const selectMesFiltro = document.getElementById('selectMesFiltro');
@@ -92,13 +96,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // TOGGLE DE MEDIO DE PAGO
-    if (radioBanco && radioTickets) {
+    if (radioBanco && radioTickets && radioTarjeta) {
         radioBanco.addEventListener('change', () => {
             selectMedioPago.value = 'Banco';
             msgTicketsStatus.classList.add('hidden');
+            containerTarjeta.classList.add('hidden');
         });
 
         radioTickets.addEventListener('change', () => {
+            containerTarjeta.classList.add('hidden');
             if (tipoActual === 'Pasivo' && saldoTicketsDisponibleNum <= 0) {
                 radioBanco.checked = true;
                 selectMedioPago.value = 'Banco';
@@ -106,6 +112,16 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 selectMedioPago.value = 'Tickets';
                 msgTicketsStatus.classList.add('hidden');
+            }
+        });
+
+        radioTarjeta.addEventListener('change', () => {
+            selectMedioPago.value = 'Tarjeta';
+            msgTicketsStatus.classList.add('hidden');
+            if (tipoActual === 'Pasivo') {
+                containerTarjeta.classList.remove('hidden');
+            } else {
+                containerTarjeta.classList.add('hidden');
             }
         });
     }
@@ -748,10 +764,14 @@ window.editarSaldo = async function(medioPago, moneda) {
 
         const medio_pago = selectMedioPago.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
+        
+        // Atrapamos tarjeta y cuotas
+        const tarjeta = selectMedioPago.value === 'Tarjeta' ? selectTarjeta.value : '';
+        const cuotas = selectMedioPago.value === 'Tarjeta' ? parseInt(inputCuotas.value) || 1 : 1;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
-        gastoPendiente = { concepto, monto, moneda, medio_pago, tipo: tipoActual, prescindible };
+        gastoPendiente = { concepto, monto, moneda, medio_pago, tipo: tipoActual, prescindible, cuotas, tarjeta };
         enviarMovimiento(gastoPendiente);
     });
 	

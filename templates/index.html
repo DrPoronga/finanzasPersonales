@@ -81,15 +81,28 @@
                     <div class="form-group">
                         <div class="payment-toggle">
                             <input type="radio" id="pagoBanco" name="pagoRadio" value="Banco" checked>
-                            <label for="pagoBanco">Banco / Efectivo</label>
+                            <label for="pagoBanco">Banco</label>
 
                             <input type="radio" id="pagoTickets" name="pagoRadio" value="Tickets">
-                            <label for="pagoTickets" id="lblPagoTickets">Tickets Alimentación</label>
+                            <label for="pagoTickets" id="lblPagoTickets">Tickets</label>
+
+                            <input type="radio" id="pagoTarjeta" name="pagoRadio" value="Tarjeta">
+                            <label for="pagoTarjeta">Tarjeta</label>
                             
                             <div class="toggle-slider-pago"></div>
                         </div>
                         <input type="hidden" id="selectMedioPago" value="Banco">
-                        <span id="msgTicketsStatus" class="tickets-status-msg hidden">⚠️ Saldo $0 en Tickets (Abonas con Banco)</span>
+                        <span id="msgTicketsStatus" class="tickets-status-msg hidden">⚠️ Saldo $0 en Tickets</span>
+                    </div>
+
+                    <!-- OPCIONES DE TARJETA Y CUOTAS (NUEVO) -->
+                    <div id="containerTarjeta" class="form-group hidden" style="display: flex; gap: 10px;">
+                        <select id="selectTarjeta" style="flex: 2; padding: 16px 10px; font-size: 15px;">
+                            <option value="VISA BBVA">VISA BBVA</option>
+                            <option value="MASTERCARD OCA">MASTERCARD OCA</option>
+                            <option value="VISA SANTANDER">VISA SANTANDER</option>
+                        </select>
+                        <input type="number" id="inputCuotas" placeholder="Cuotas" min="1" max="48" value="1" style="flex: 1; text-align: center; padding: 16px 10px; font-size: 15px;">
                     </div>
 
                     <div id="containerPrescindible" class="form-group checkbox-group">
