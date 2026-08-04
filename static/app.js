@@ -575,18 +575,18 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
                 // CONSUMO DE TARJETAS DE CRÉDITO
                 // ==========================================
                 if (data.gastos_por_tarjeta) {
-                    const bbva = data.gastos_por_tarjeta["VISA BBVA"] ? data.gastos_por_tarjeta["VISA BBVA"].UYU : 0;
-                    const oca = data.gastos_por_tarjeta["MASTERCARD OCA"] ? data.gastos_por_tarjeta["MASTERCARD OCA"].UYU : 0;
-                    const sant = data.gastos_por_tarjeta["VISA SANTANDER"] ? data.gastos_por_tarjeta["VISA SANTANDER"].UYU : 0;
+					const bbva = data.gastos_por_tarjeta["VISA BBVA"] ? data.gastos_por_tarjeta["VISA BBVA"].UYU : 0;
+					const oca = data.gastos_por_tarjeta["MASTERCARD OCA"] ? data.gastos_por_tarjeta["MASTERCARD OCA"].UYU : 0;
+					const sant = data.gastos_por_tarjeta["VISA SANTANDER"] ? data.gastos_por_tarjeta["VISA SANTANDER"].UYU : 0;
 
-                    const lblDispBBVA = document.getElementById('lblDispBBVA');
-                    const lblDispOCA = document.getElementById('lblDispOCA');
-                    const lblDispSantander = document.getElementById('lblDispSantander');
+					const lblDispBBVA = document.getElementById('lblDispBBVA');
+					const lblDispOCA = document.getElementById('lblDispOCA');
+					const lblDispSantander = document.getElementById('lblDispSantander');
 
-                    if (lblDispBBVA) lblDispBBVA.textContent = `Gastado: $${bbva.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
-                    if (lblDispOCA) lblDispOCA.textContent = `Gastado: $${oca.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
-                    if (lblDispSantander) lblDispSantander.textContent = `Gastado: $${sant.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
-                }
+					if (lblDispBBVA) lblDispBBVA.textContent = `Consumo: $${bbva.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+					if (lblDispOCA) lblDispOCA.textContent = `Consumo: $${oca.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+					if (lblDispSantander) lblDispSantander.textContent = `Consumo: $${sant.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+				}
 
                 // ==========================================
                 // SALDOS Y RACHAS

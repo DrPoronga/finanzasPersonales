@@ -31,9 +31,10 @@ body {
 }
 
 .container {
-    width: 100%;
-    max-width: 420px;
-    padding: 70px 18px 40px 18px;
+    width: 90%;
+    max-width: 600px; /* Aumentado para que en pantallas más grandes luzca pro */
+    margin: 0 auto;
+    padding: 70px 0 40px 0;
     box-sizing: border-box;
 }
 
@@ -929,20 +930,22 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 /* ==========================================
-   SISTEMA DE TABS PARA FINANZAS
+   SISTEMA DE TABS FLUIDO
    ========================================== */
 .tabs-header {
     display: flex;
+    width: 100%;
     background: var(--badge-bg);
     border-radius: 12px;
     padding: 4px;
     margin-bottom: 16px;
     gap: 4px;
+    box-sizing: border-box;
 }
 
 .tab-btn {
     flex: 1;
-    padding: 10px 0;
+    padding: 12px 0;
     font-size: 14px;
     font-weight: 600;
     color: var(--subtext);
@@ -960,7 +963,14 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 .tab-content {
+    width: 100%;
+    box-sizing: border-box;
     animation: fadeIn 0.2s ease-in-out;
+}
+
+.tab-content .card {
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @keyframes fadeIn {
