@@ -70,6 +70,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let detallesTransaccionesCache = [];
     let gastosFijosCache = [];
     const cardFijos = document.getElementById('cardFijos');
+	
+	// --- MANEJO DE TABS EN VISTA METRICAS ---
+	const tabBtns = document.querySelectorAll('.tab-btn');
+	const tabContents = document.querySelectorAll('.tab-content');
+
+	tabBtns.forEach(btn => {
+		btn.addEventListener('click', () => {
+			const targetTab = btn.getAttribute('data-tab');
+
+			tabBtns.forEach(b => b.classList.remove('active'));
+			tabContents.forEach(c => c.classList.add('hidden'));
+
+			btn.classList.add('active');
+			document.getElementById(targetTab).classList.remove('hidden');
+		});
+	});
 
     checkAutenticacion();
 	
@@ -539,7 +555,7 @@ window.editarSaldo = async function(medioPago, moneda) {
         modalDetalle.classList.remove('hidden');
     }
 	
-    async function cargarMetricas(mesSeleccionado = '', force = false) {
+async function cargarMetricas(mesSeleccionado = '', force = false) {
         try {
             let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
             if (force) {
@@ -555,6 +571,26 @@ window.editarSaldo = async function(medioPago, moneda) {
                 balanceUSDNum = data.balance_usd_num || 0;
                 saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
 
+                // ==========================================
+                // CONSUMO DE TARJETAS DE CRÉDITO
+                // ==========================================
+                if (data.gastos_por_tarjeta) {
+                    const bbva = data.gastos_por_tarjeta["VISA BBVA"] ? data.gastos_por_tarjeta["VISA BBVA"].UYU : 0;
+                    const oca = data.gastos_por_tarjeta["MASTERCARD OCA"] ? data.gastos_por_tarjeta["MASTERCARD OCA"].UYU : 0;
+                    const sant = data.gastos_por_tarjeta["VISA SANTANDER"] ? data.gastos_por_tarjeta["VISA SANTANDER"].UYU : 0;
+
+                    const lblDispBBVA = document.getElementById('lblDispBBVA');
+                    const lblDispOCA = document.getElementById('lblDispOCA');
+                    const lblDispSantander = document.getElementById('lblDispSantander');
+
+                    if (lblDispBBVA) lblDispBBVA.textContent = `Gastado: $${bbva.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+                    if (lblDispOCA) lblDispOCA.textContent = `Gastado: $${oca.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+                    if (lblDispSantander) lblDispSantander.textContent = `Gastado: $${sant.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
+                }
+
+                // ==========================================
+                // SALDOS Y RACHAS
+                // ==========================================
                 const lblSaldoTickets = document.getElementById('lblSaldoTickets');
                 if (lblSaldoTickets) {
                     lblSaldoTickets.textContent = data.saldo_tickets_uyu;
@@ -739,8 +775,7 @@ window.editarSaldo = async function(medioPago, moneda) {
         } catch (error) {
             console.error("Error cargando métricas", error);
         }
-    }
-	
+    }	
     // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
     cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });

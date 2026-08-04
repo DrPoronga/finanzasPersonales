@@ -657,7 +657,27 @@ def obtener_metricas():
             })
 
         detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
+        
+        # Acumular consumo por tarjeta en el mes seleccionado
+        gastos_por_tarjeta = {
+            "VISA BBVA": {"UYU": 0.0, "USD": 0.0},
+            "MASTERCARD OCA": {"UYU": 0.0, "USD": 0.0},
+            "VISA SANTANDER": {"UYU": 0.0, "USD": 0.0}
+        }
 
+        for r in registros:
+            medio_raw = str(r.get('Cuenta') or r.get('Medio de Pago') or '').strip()
+            mes_r = str(r.get('Mes', '')).strip().upper()
+            es_mes_val = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
+            
+            if 'Tarjeta' in medio_raw and es_pasivo(r.get('Tipo')) and es_mes_val:
+                monto_r = float(str(r.get('Monto', 0)).replace(',', '.') or 0)
+                mon_r = normalizar_moneda(r.get('Moneda'))
+                
+                for t_nombre in gastos_por_tarjeta.keys():
+                    if t_nombre in medio_raw.upper():
+                        gastos_por_tarjeta[t_nombre][mon_r] += monto_r
+                        
         return jsonify({
             "status": "success",
             "mes_actual": mes_solicitado,
@@ -694,7 +714,8 @@ def obtener_metricas():
             "desglose": desglose,
             "desglose_conceptos": desglose_conceptos,
             "detalles": detalles_filtrados,
-            "fijos": detalles_fijos
+            "fijos": detalles_fijos,
+            "gastos_por_tarjeta": gastos_por_tarjeta  # <-- ¡Aquí estaba el faltante!
         })
 
     except Exception as e:

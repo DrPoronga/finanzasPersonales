@@ -116,7 +116,7 @@
                 </form>
             </section>
 
-            <!-- VISTA MÉTRICAS -->
+            <!-- VISTA MÉTRICAS / FINANZAS CON TABS -->
             <section id="vistaMetricas" class="hidden">
                 
                 <!-- FILTRO DE MESES -->
@@ -124,183 +124,236 @@
                     <select id="selectMesFiltro"></select>
                 </div>
 
-                <!-- DESTACADO GAMIFICADO: RACHA DE DÍAS -->
-                <div class="card card-racha">
-                    <div class="racha-content">
-                        <span class="racha-icon">🔥</span>
-                        <div class="racha-text">
-                            <h3 id="lblRachaTitulo">Racha Invicto</h3>
-                            <span id="lblRachaDias" class="racha-count">0 Días</span>
-                            <p class="racha-sub">sin gastos prescindibles</p>
-                        </div>
-                    </div>
+                <!-- NAVEGACIÓN DE TABS -->
+                <div class="tabs-header">
+                    <button type="button" class="tab-btn active" data-tab="tabHoy">🎯 Hoy</button>
+                    <button type="button" class="tab-btn" data-tab="tabCuentas">💳 Cuentas</button>
+                    <button type="button" class="tab-btn" data-tab="tabAnalisis">📊 Análisis</button>
                 </div>
 
-                <!-- TARJETA SALDO TICKETS ALIMENTACIÓN -->
-                <div class="card tickets-card">
-					<div style="display: flex; justify-content: space-between; align-items: center;">
-						<h3>Saldo Tickets Alimentación</h3>
-						<button type="button" class="btn-edit-balance" onclick="editarSaldo('Tickets', 'UYU')">✏️</button>
-					</div>
-					<div class="monto-group">
-						<div class="monto-row">
-							<span class="badge">TICKETS</span>
-							<span id="lblSaldoTickets" class="monto-num">$0</span>
-						</div>
-					</div>
-				</div>
-
-                <!-- DESTACADO: DISPONIBLE HOY -->
-                <div class="card disponible-card">
-                    <h3>Disponible para hoy</h3>
-                    <div class="monto-group">
-                        <div class="monto-row">
-                            <span class="badge">UYU</span>
-                            <span id="lblDisponibleHoyUYU" class="monto-num">$0</span>
-                        </div>
-                        <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblDisponibleHoyUSD" class="monto-num">US$0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- BANCO -->
-                <div class="card balance-card">
-					<h3>Dinero en el banco</h3>
-					<div class="monto-group">
-						<div class="monto-row" style="justify-content: space-between;">
-							<div style="display: flex; align-items: center; gap: 12px;">
-								<span class="badge">UYU</span>
-								<span id="lblBalanceUYU" class="monto-num">$0</span>
-							</div>
-							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'UYU')" title="Ajustar Pesos">✏️ Editar Pesos</button>
-						</div>
-						<div class="monto-row" style="justify-content: space-between;">
-							<div style="display: flex; align-items: center; gap: 12px;">
-								<span class="badge">USD</span>
-								<span id="lblBalanceUSD" class="monto-num">US$0</span>
-							</div>
-							<button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'USD')" title="Ajustar Dólares">✏️ Editar Dólares</button>
-						</div>
-					</div>
-				</div>
-
-                <!-- TARJETA OBJETIVOS DE AHORRO (SEMANAL Y MENSUAL) -->
-                <div class="card objetivos-card">
-                    <h4>Metas de Ahorro "Al Pedo"</h4>
-                    <p class="objetivos-sub">Tope calculado reduciendo 20% tu promedio histórico</p>
+                <!-- ================= TAB 1: HOY (ANTI-TENTACIONES) ================= -->
+                <div id="tabHoy" class="tab-content active">
                     
-                    <div class="objetivo-box">
-                        <div class="objetivo-header">
-                            <span>Esta Semana</span>
-                            <strong id="lblMetaSemanal">$0 meta</strong>
-                        </div>
-                        <div class="objetivo-body">
-                            <span>Gastado: <strong id="lblGastadoSemana">$0</strong></span>
-                            <span id="lblDispSemanaContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleSemana">$0</strong></span>
+                    <!-- DESTACADO: DISPONIBLE HOY -->
+                    <div class="card disponible-card">
+                        <h3>Disponible para gastar hoy</h3>
+                        <div class="monto-group">
+                            <div class="monto-row">
+                                <span class="badge">UYU</span>
+                                <span id="lblDisponibleHoyUYU" class="monto-num">$0</span>
+                            </div>
+                            <div class="monto-row">
+                                <span class="badge">USD</span>
+                                <span id="lblDisponibleHoyUSD" class="monto-num">US$0</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="objetivo-box" style="margin-top: 10px;">
-                        <div class="objetivo-header">
-                            <span>Este Mes</span>
-                            <strong id="lblMetaMensual">$0 meta</strong>
-                        </div>
-                        <div class="objetivo-body">
-                            <span>Gastado: <strong id="lblGastadoMes">$0</strong></span>
-                            <span id="lblDispMesContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleMes">$0</strong></span>
-                        </div>
-                        <div class="presupuesto-track" style="margin-top: 8px;">
-                            <div id="barPrescindibleFill" class="presupuesto-fill" style="width: 0%;"></div>
+                    <!-- DESTACADO GAMIFICADO: RACHA DE DÍAS -->
+                    <div class="card card-racha">
+                        <div class="racha-content">
+                            <span class="racha-icon">🔥</span>
+                            <div class="racha-text">
+                                <h3 id="lblRachaTitulo">Racha Invicto</h3>
+                                <span id="lblRachaDias" class="racha-count">0 Días</span>
+                                <p class="racha-sub">sin gastos prescindibles</p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- PRESCINDIBLE -->
-                <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
-                    <div class="card-header-action">
-                        <h3>Gastos prescindibles acumulados <span id="cntPrescindibles" class="count-badge"></span></h3>
-                    </div>
-                    <div class="monto-group">
-                        <div class="monto-row">
-                            <span class="badge">UYU</span>
-                            <span id="lblPrescindibleUYU" class="monto-num">$0</span>
+                    <!-- OBJETIVOS DE AHORRO "AL PEDO" -->
+                    <div class="card objetivos-card">
+                        <h4>Metas Prescindibles ("Al Pedo")</h4>
+                        <p class="objetivos-sub">Tope calculado reduciendo 20% tu promedio histórico</p>
+                        
+                        <div class="objetivo-box">
+                            <div class="objetivo-header">
+                                <span>Esta Semana</span>
+                                <strong id="lblMetaSemanal">$0 meta</strong>
+                            </div>
+                            <div class="objetivo-body">
+                                <span>Gastado: <strong id="lblGastadoSemana">$0</strong></span>
+                                <span id="lblDispSemanaContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleSemana">$0</strong></span>
+                            </div>
                         </div>
-                        <div class="monto-row">
-                            <span class="badge">USD</span>
-                            <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
+
+                        <div class="objetivo-box" style="margin-top: 10px;">
+                            <div class="objetivo-header">
+                                <span>Este Mes</span>
+                                <strong id="lblMetaMensual">$0 meta</strong>
+                            </div>
+                            <div class="objetivo-body">
+                                <span>Gastado: <strong id="lblGastadoMes">$0</strong></span>
+                                <span id="lblDispMesContainer" class="disp-tag">Te quedan: <strong id="lblDisponibleMes">$0</strong></span>
+                            </div>
+                            <div class="presupuesto-track" style="margin-top: 8px;">
+                                <div id="barPrescindibleFill" class="presupuesto-fill" style="width: 0%;"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- TOP GASTOS ESPECÍFICOS (POR ÍTEM) -->
-                <div class="card desglose-card">
-                    <h4>Top Ítems / Gastos Específicos</h4>
-                    <div id="listaConceptos"></div>
-                </div>
-
-                <!-- MÉTRICAS BIMONEDA -->
-                <div class="metricas-grid">
-                    <div class="card card-interactive" id="cardIngresos" title="Toca para ver el detalle de ingresos">
+                    <!-- GASTOS PRESCINDIBLES ACUMULADOS -->
+                    <div class="card prescindible-card card-interactive" id="cardPrescindible" title="Toca para ver el detalle">
                         <div class="card-header-action">
-                            <h4>Ingresos <span id="cntIngresos" class="count-badge"></span></h4>
+                            <h3>Gastos prescindibles acumulados <span id="cntPrescindibles" class="count-badge"></span></h3>
                         </div>
-                        <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblIngresosUYU" class="val">$0</span></div>
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblIngresosUSD" class="val">US$0</span></div>
+                        <div class="monto-group">
+                            <div class="monto-row">
+                                <span class="badge">UYU</span>
+                                <span id="lblPrescindibleUYU" class="monto-num">$0</span>
+                            </div>
+                            <div class="monto-row">
+                                <span class="badge">USD</span>
+                                <span id="lblPrescindibleUSD" class="monto-num">US$0</span>
+                            </div>
                         </div>
-                        <span id="lblCompIngresos" class="comparativa-tag"></span>
+                    </div>
+                </div>
+
+                <!-- ================= TAB 2: CUENTAS (DINERO REAL, CRÉDITO Y FIJOS) ================= -->
+                <div id="tabCuentas" class="tab-content hidden">
+                    
+                    <!-- BANCO -->
+                    <div class="card balance-card">
+                        <h3>Dinero en el Banco</h3>
+                        <div class="monto-group">
+                            <div class="monto-row" style="justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span class="badge">UYU</span>
+                                    <span id="lblBalanceUYU" class="monto-num">$0</span>
+                                </div>
+                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'UYU')" title="Ajustar Pesos">✏️ Editar</button>
+                            </div>
+                            <div class="monto-row" style="justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span class="badge">USD</span>
+                                    <span id="lblBalanceUSD" class="monto-num">US$0</span>
+                                </div>
+                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Banco', 'USD')" title="Ajustar Dólares">✏️ Editar</button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="card card-interactive" id="cardGastos" title="Toca para ver el detalle de gastos">
+                    <!-- SALDO TICKETS ALIMENTACIÓN -->
+                    <div class="card tickets-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3>Tickets Alimentación</h3>
+                            <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tickets', 'UYU')">✏️ Editar</button>
+                        </div>
+                        <div class="monto-group" style="margin-top: 8px;">
+                            <div class="monto-row">
+                                <span class="badge">TICKETS</span>
+                                <span id="lblSaldoTickets" class="monto-num">$0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CRÉDITO DISPONIBLE TARJETAS -->
+                    <div class="card tarjetas-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3>Disponible en Tarjetas</h3>
+                        </div>
+                        <div class="monto-group">
+                            <!-- VISA BBVA -->
+                            <div class="monto-row" style="justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                                <div>
+                                    <span class="badge">VISA BBVA</span>
+                                    <span id="lblDispBBVA" class="monto-num" style="font-size: 16px;">$0</span>
+                                </div>
+                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - VISA BBVA', 'UYU')">✏️ Editar</button>
+                            </div>
+                            <!-- MASTERCARD OCA -->
+                            <div class="monto-row" style="justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                                <div>
+                                    <span class="badge">OCA</span>
+                                    <span id="lblDispOCA" class="monto-num" style="font-size: 16px;">$0</span>
+                                </div>
+                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - MASTERCARD OCA', 'UYU')">✏️ Editar</button>
+                            </div>
+                            <!-- VISA SANTANDER -->
+                            <div class="monto-row" style="justify-content: space-between;">
+                                <div>
+                                    <span class="badge">SANTANDER</span>
+                                    <span id="lblDispSantander" class="monto-num" style="font-size: 16px;">$0</span>
+                                </div>
+                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - VISA SANTANDER', 'UYU')">✏️ Editar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CONTROL DE GASTOS FIJOS -->
+                    <div class="card card-interactive" id="cardFijos" title="Toca para ver todos los gastos fijos">
                         <div class="card-header-action">
-                            <h4>Gastos <span id="cntGastos" class="count-badge"></span></h4>
+                            <h4>Control de Gastos Fijos</h4>
                         </div>
-                        <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastosUYU" class="val">$0</span></div>
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastosUSD" class="val">US$0</span></div>
-                        </div>
-                        <span id="lblCompGastos" class="comparativa-tag"></span>
+                        <div id="listaFijos"></div>
                     </div>
                 </div>
 
-                <div class="metricas-grid">
+                <!-- ================= TAB 3: ANÁLISIS (MÉTRICAS Y COMPARATIVAS) ================= -->
+                <div id="tabAnalisis" class="tab-content hidden">
+                    
+                    <!-- MÉTRICAS BIMONEDA -->
+                    <div class="metricas-grid">
+                        <div class="card card-interactive" id="cardIngresos" title="Toca para ver el detalle de ingresos">
+                            <div class="card-header-action">
+                                <h4>Ingresos <span id="cntIngresos" class="count-badge"></span></h4>
+                            </div>
+                            <div class="monto-group-compact">
+                                <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblIngresosUYU" class="val">$0</span></div>
+                                <div class="monto-row-compact"><span class="badge">USD</span><span id="lblIngresosUSD" class="val">US$0</span></div>
+                            </div>
+                            <span id="lblCompIngresos" class="comparativa-tag"></span>
+                        </div>
+
+                        <div class="card card-interactive" id="cardGastos" title="Toca para ver el detalle de gastos">
+                            <div class="card-header-action">
+                                <h4>Gastos <span id="cntGastos" class="count-badge"></span></h4>
+                            </div>
+                            <div class="monto-group-compact">
+                                <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastosUYU" class="val">$0</span></div>
+                                <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastosUSD" class="val">US$0</span></div>
+                            </div>
+                            <span id="lblCompGastos" class="comparativa-tag"></span>
+                        </div>
+                    </div>
+
+                    <div class="metricas-grid">
+                        <div class="card">
+                            <h4>Promedio Diario</h4>
+                            <div class="monto-group-compact">
+                                <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastoDiarioUYU" class="val">$0</span></div>
+                                <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastoDiarioUSD" class="val">US$0</span></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h4>Tasa de Ahorro</h4>
+                            <div class="monto-group-compact">
+                                <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblTasaAhorroUYU" class="val">0%</span></div>
+                                <div class="monto-row-compact"><span class="badge">USD</span><span id="lblTasaAhorroUSD" class="val">0%</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MAYOR CATEGORÍA -->
                     <div class="card">
-                        <h4>Promedio Diario</h4>
-                        <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblGastoDiarioUYU" class="val">$0</span></div>
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblGastoDiarioUSD" class="val">US$0</span></div>
-                        </div>
+                        <h4>Mayor Categoría de Gasto</h4>
+                        <span id="lblTopCategoria" class="top-cat-text">-</span>
                     </div>
-                    <div class="card">
-                        <h4>Tasa de Ahorro</h4>
-                        <div class="monto-group-compact">
-                            <div class="monto-row-compact"><span class="badge">UYU</span><span id="lblTasaAhorroUYU" class="val">0%</span></div>
-                            <div class="monto-row-compact"><span class="badge">USD</span><span id="lblTasaAhorroUSD" class="val">0%</span></div>
-                        </div>
+
+                    <!-- TOP ÍTEMS -->
+                    <div class="card desglose-card">
+                        <h4>Top Ítems / Gastos Específicos</h4>
+                        <div id="listaConceptos"></div>
+                    </div>
+
+                    <!-- DESGLOSE POR CATEGORÍA -->
+                    <div class="card desglose-card">
+                        <h4>Gastos por Categoría</h4>
+                        <div id="listaDesglose"></div>
                     </div>
                 </div>
 
-                <!-- MAYOR CATEGORÍA -->
-                <div class="card">
-                    <h4>Mayor Categoría de Gasto</h4>
-                    <span id="lblTopCategoria" class="top-cat-text">-</span>
-                </div>
-
-                <!-- CONTROL DE GASTOS FIJOS -->
-                <div class="card card-interactive" id="cardFijos" title="Toca para ver todos los gastos fijos">
-                    <div class="card-header-action">
-                        <h4>Control de Gastos Fijos</h4>
-                    </div>
-                    <div id="listaFijos"></div>
-                </div>
-				
-                <!-- DESGLOSE POR CATEGORÍA -->
-                <div class="card desglose-card">
-                    <h4>Gastos por Categoría</h4>
-                    <div id="listaDesglose"></div>
-                </div>
             </section>
 			
 			<div id="mensaje" class="hidden"></div>
