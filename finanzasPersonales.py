@@ -343,7 +343,7 @@ def obtener_metricas():
             num_mes_prev = 12 if num_mes == 1 else num_mes - 1
             mes_prev_nombre = MESES[num_mes_prev]
 
-        # Acumulados
+        # Acumulados de saldo disponible (Banco y Tickets)
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
         ingresos_tickets_uyu, gastos_tickets_uyu = 0.0, 0.0
@@ -380,6 +380,7 @@ def obtener_metricas():
                 monto = float(monto_raw) if monto_raw else 0.0
             except (ValueError, TypeError):
                 monto = 0.0
+
             moneda = normalizar_moneda(r.get('Moneda'))
             tipo = str(r.get('Tipo', '')).strip().capitalize()
             cat = str(r.get('Categoria', 'Varios')).strip() or 'Varios'
@@ -388,10 +389,15 @@ def obtener_metricas():
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
 
-            medio_pago_raw = r.get('Cuenta') or r.get('Medio de Pago') or 'Banco'
-            medio_pago = str(medio_pago_raw).strip().capitalize()
-            if medio_pago not in ['Banco', 'Tickets']:
-                medio_pago = 'Banco'
+            # 1. NORMALIZACIÓN DE MEDIOS DE PAGO
+            medio_pago_raw = str(r.get('Cuenta') or r.get('Medio de Pago') or 'Banco').strip()
+
+            if 'Tickets' in medio_pago_raw:
+                medio_pago_tipo = 'Tickets'
+            elif 'Tarjeta' in medio_pago_raw:
+                medio_pago_tipo = 'Tarjeta'
+            else:
+                medio_pago_tipo = 'Banco'
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
@@ -417,20 +423,24 @@ def obtener_metricas():
                 except ValueError:
                     pass
 
-            # SEPARACIÓN BANCO VS TICKETS
-            if medio_pago == 'Tickets':
-                if not es_pasivo(tipo): ingresos_tickets_uyu += monto
-                else: gastos_tickets_uyu += monto
-            else:
+            # 2. SEPARACIÓN DE SALDOS ACUMULADOS REALES (Banco vs Tickets vs Tarjeta)
+            if medio_pago_tipo == 'Tickets':
+                if not es_pasivo(tipo): 
+                    ingresos_tickets_uyu += monto
+                else: 
+                    gastos_tickets_uyu += monto
+            elif medio_pago_tipo == 'Banco':
+                # Solo el dinero movido por Banco afecta el balance bancario real
                 if moneda == 'USD':
                     if not es_pasivo(tipo): ingresos_acum_usd += monto
                     else: gastos_acum_usd += monto
                 else:
                     if not es_pasivo(tipo): ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
+            # NOTA: Las compras con 'Tarjeta' (crédito) no acumulan en gastos_acum de banco para no restar saldo de cuenta.
 
-            # Pronóstico Fijos
-            if medio_pago != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro:
+            # 3. PRONÓSTICO DE GASTOS FIJOS
+            if medio_pago_tipo != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro:
                 if mes_registro != mes_actual_nombre:
                     if cat not in historial_fijos[moneda]:
                         historial_fijos[moneda][cat] = {}
@@ -438,7 +448,7 @@ def obtener_metricas():
                 else:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
 
-            # Comparativa Mes Anterior
+            # 4. COMPARATIVA MES ANTERIOR
             if mes_prev_nombre and mes_registro == mes_prev_nombre:
                 if not es_pasivo(tipo):
                     if moneda == 'USD': ingresos_prev_usd += monto
@@ -447,7 +457,7 @@ def obtener_metricas():
                     if moneda == 'USD': gastos_prev_usd += monto
                     else: gastos_prev_uyu += monto
 
-            # Filtro mes
+            # 5. FILTRO POR MES SOLICITADO
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
                 if fecha_str:
@@ -485,7 +495,7 @@ def obtener_metricas():
                     "categoria": cat,
                     "tipo": tipo,
                     "prescindible": es_prescindible,
-                    "medio_pago": medio_pago
+                    "medio_pago": medio_pago_raw
                 })
 
         saldo_tickets_uyu = ingresos_tickets_uyu - gastos_tickets_uyu
@@ -529,7 +539,7 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
-        # DISPONIBLE PARA HOY (Corregido)
+        # DISPONIBLE PARA HOY
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
             dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
@@ -692,7 +702,7 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-    
+        
 @app.route('/obtener_conceptos', methods=['GET'])
 @requiere_pin
 def obtener_conceptos():
