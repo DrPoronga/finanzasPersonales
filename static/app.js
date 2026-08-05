@@ -557,8 +557,7 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
 
 					const tarjetasConfig = [
 						{ id: 'lblDispBBVA', nombre: 'VISA BBVA' },
-						{ id: 'lblDispOCA', nombre: 'MASTERCARD OCA' },
-						{ id: 'lblDispSantander', nombre: 'VISA SANTANDER' }
+						{ id: 'lblDispOCA', nombre: 'MASTERCARD OCA' }
 					];
 
                     const limitesDesdeSheet = data.limites_tarjetas || {};
@@ -573,7 +572,7 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
                             // Convertimos USD a UYU (tipo de cambio 40)
                             const gastadoTotalUYU = gastadoUYU + (gastadoUSD * 40);
 
-							// Prioridad a Google Sheets si existe la tarjeta (incluso si el límite es 0)
+							// Prioridad a Google Sheets si existe la tarjeta
 							let limiteTotal = 50000;
                             if (limitesDesdeSheet[t.nombre] !== undefined && limitesDesdeSheet[t.nombre] !== null && !isNaN(limitesDesdeSheet[t.nombre])) {
                                 limiteTotal = parseFloat(limitesDesdeSheet[t.nombre]);

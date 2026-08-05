@@ -357,7 +357,7 @@ def obtener_metricas():
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
         ingresos_tickets_uyu, gastos_tickets_uyu = 0.0, 0.0
 
-        # Totales mes filtrado (excluirán ajustes)
+        # Totales mes filtrado (sin ajustes)
         ingresos_filtrado_usd, gastos_filtrado_usd, prescindible_filtrado_usd = 0.0, 0.0, 0.0
         ingresos_filtrado_uyu, gastos_filtrado_uyu, prescindible_filtrado_uyu = 0.0, 0.0, 0.0
         
@@ -381,7 +381,7 @@ def obtener_metricas():
         
         gastado_semana_actual_uyu = 0.0
         gastado_semana_actual_usd = 0.0
-        inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
+        inicio_semana_actual = me_actual_date = ahora.date() - timedelta(days=ahora.weekday())
 
         for r in registros:
             try:
@@ -398,7 +398,7 @@ def obtener_metricas():
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
 
-            # DETECCION DE AJUSTES DE SALDO
+            # DETECCIÓN DE AJUSTES DE SALDO
             cat_upper = cat.upper()
             concepto_upper = concepto_raw.upper()
             es_ajuste = (cat_upper == "AJUSTE") or ("AJUSTE" in concepto_upper)
@@ -430,14 +430,13 @@ def obtener_metricas():
                     dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                     fechas_prescindibles.append(dt)
 
-                    if dt >= inicio_semana_actual:
+                    if dt >= me_actual_date:
                         if moneda == 'USD': gastado_semana_actual_usd += monto
                         else: gastado_semana_actual_uyu += monto
                 except ValueError:
                     pass
 
             # 2. SEPARACIÓN DE SALDOS ACUMULADOS REALES (Banco vs Tickets vs Tarjeta)
-            # NOTA: Los ajustes SÍ modifican el saldo acumulado real para mantener el banco exacto.
             if medio_pago_tipo == 'Tickets':
                 if not es_pasivo(tipo): 
                     ingresos_tickets_uyu += monto
@@ -451,7 +450,7 @@ def obtener_metricas():
                     if not es_pasivo(tipo): ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
 
-            # 3. PRONÓSTICO DE GASTOS FIJOS (Sin ajustes)
+            # 3. PRONÓSTICO DE GASTOS FIJOS (Sin Santander)
             if medio_pago_tipo != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro and not es_ajuste:
                 if mes_registro != mes_actual_nombre:
                     if cat not in historial_fijos[moneda]:
@@ -475,7 +474,6 @@ def obtener_metricas():
                 if fecha_str:
                     fechas_unicas_filtradas.add(fecha_str)
 
-                # SOLO SI NO ES AJUSTE LO SUMAMOS A GASTOS O INGRESOS DEL MES
                 if not es_ajuste:
                     if not es_pasivo(tipo):
                         if moneda == 'USD': ingresos_filtrado_usd += monto
@@ -525,7 +523,7 @@ def obtener_metricas():
 
         pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / meta_mensual_prescindible_uyu * 100)) if meta_mensual_prescindible_uyu > 0 else 0.0
 
-        hoy_date = ahora.date()
+        hoy_date = me_actual_date = ahora.date()
         if not fechas_prescindibles:
             racha_dias = 30
         else:
@@ -554,7 +552,7 @@ def obtener_metricas():
         # DISPONIBLE PARA HOY
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
-            dias_totales_mes = calendar.monthrange(ahora.year, me_actual := ahora.month)[1]
+            dias_totales_mes = calendar.monthrange(ahora.year, me_num := ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
             neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
@@ -617,11 +615,11 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
+        # LISTADO DE GASTOS FIJOS DECLARADOS (SIN SANTANDER)
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "PATENTE AUTO", "ANTEL", 
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
             "PRESTAMO OCA", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
-            "TARJETA SANTANDER PESOS", "TARJETA SANTANDER DOLARES", 
             "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
         ]
 
@@ -670,11 +668,10 @@ def obtener_metricas():
 
         detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
         
-        # Acumular consumo por tarjeta en el mes seleccionado
+        # Acumular consumo por tarjeta en el mes seleccionado (SOLO BBVA Y OCA)
         gastos_por_tarjeta = {
             "VISA BBVA": {"UYU": 0.0, "USD": 0.0},
-            "MASTERCARD OCA": {"UYU": 0.0, "USD": 0.0},
-            "VISA SANTANDER": {"UYU": 0.0, "USD": 0.0}
+            "MASTERCARD OCA": {"UYU": 0.0, "USD": 0.0}
         }
 
         for r in registros:

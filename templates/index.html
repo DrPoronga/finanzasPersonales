@@ -100,7 +100,6 @@
                         <select id="selectTarjeta" style="flex: 2; padding: 16px 10px; font-size: 15px;">
                             <option value="VISA BBVA">VISA BBVA</option>
                             <option value="MASTERCARD OCA">MASTERCARD OCA</option>
-                            <option value="VISA SANTANDER">VISA SANTANDER</option>
                         </select>
                         <input type="number" id="inputCuotas" placeholder="Cuotas" min="1" max="48" value="1" style="flex: 1; text-align: center; padding: 16px 10px; font-size: 15px;">
                     </div>
@@ -269,14 +268,6 @@
                                     <span id="lblDispOCA" class="monto-num" style="font-size: 16px;">$0</span>
                                 </div>
                                 <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - MASTERCARD OCA', 'UYU')">✏️ Editar</button>
-                            </div>
-                            <!-- VISA SANTANDER -->
-                            <div class="monto-row" style="justify-content: space-between;">
-                                <div>
-                                    <span class="badge">SANTANDER</span>
-                                    <span id="lblDispSantander" class="monto-num" style="font-size: 16px;">$0</span>
-                                </div>
-                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - VISA SANTANDER', 'UYU')">✏️ Editar</button>
                             </div>
                         </div>
                     </div>
