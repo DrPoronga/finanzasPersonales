@@ -209,7 +209,7 @@ window.editarSaldo = async function(medioPago, moneda) {
 
         const promptMsg = `=== AJUSTAR CRÉDITO DISPONIBLE (${nombreTarjeta}) ===\n\n` +
                           `¿Cuánto crédito DISPONIBLE te queda AHORA MISMO en la app del banco?\n` +
-                          `(Ejemplo: Si en tu banco te quedan $2500 para gastar, ingresa 2500)`;
+                          `(Ejemplo: Si te quedan $0 para gastar, ingresa 0)`;
 
         const disponibleIngresadoStr = prompt(promptMsg);
         if (disponibleIngresadoStr === null) return;
@@ -228,8 +228,10 @@ window.editarSaldo = async function(medioPago, moneda) {
             gastadoActualUYU = uyu + (usd * 40);
         }
 
-        // Para que en pantalla quede EXACTAMENTE el disponible que ingresaste,
-        // guardamos el límite ajustado en Google Sheets
+        // Limpiamos la memoria vieja del celular para que no interfiera
+        localStorage.removeItem(`limite_${nombreTarjeta}`);
+
+        // Guardamos el límite ajustado en Google Sheets
         const limiteCalculado = disponibleIngresado + gastadoActualUYU;
 
         try {
@@ -242,6 +244,7 @@ window.editarSaldo = async function(medioPago, moneda) {
             const data = await res.json();
             if (res.ok && data.status === 'success') {
                 alert(`¡Listo! Disponible de ${nombreTarjeta} fijado en $${disponibleIngresado.toLocaleString('es-UY')}`);
+                // Forzamos la recarga desde Google Sheets
                 cargarMetricas(selectMesFiltro.value, true);
             } else {
                 alert(`Error al guardar: ${data.message || 'Error desconocido'}`);
