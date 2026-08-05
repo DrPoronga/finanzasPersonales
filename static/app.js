@@ -570,10 +570,10 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
                             // Convertimos USD a UYU (tipo de cambio 40)
                             const gastadoTotalUYU = gastadoUYU + (gastadoUSD * 40);
 
-							// Prioridad absoluta a Google Sheets si existe la tarjeta
+							// Prioridad a Google Sheets si existe la tarjeta (incluso si el límite es 0)
 							let limiteTotal = 50000;
-                            if (limitesDesdeSheet[t.nombre] !== undefined && limitesDesdeSheet[t.nombre] > 0) {
-                                limiteTotal = limitesDesdeSheet[t.nombre];
+                            if (limitesDesdeSheet[t.nombre] !== undefined && limitesDesdeSheet[t.nombre] !== null && !isNaN(limitesDesdeSheet[t.nombre])) {
+                                limiteTotal = parseFloat(limitesDesdeSheet[t.nombre]);
                             } else if (localStorage.getItem(`limite_${t.nombre}`)) {
                                 limiteTotal = parseFloat(localStorage.getItem(`limite_${t.nombre}`));
                             }
