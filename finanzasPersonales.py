@@ -180,7 +180,6 @@ def registrar_gasto():
     if tipo_ingresado not in ['Activo', 'Pasivo']:
         return jsonify({"status": "error", "message": "Tipo no válido."}), 400
 
-    # Soporte para Tarjetas y Cuotas
     medio_pago = str(datos.get('medio_pago', 'Banco')).strip().capitalize()
     if medio_pago not in ['Banco', 'Tickets', 'Tarjeta']:
         medio_pago = 'Banco'
@@ -198,8 +197,8 @@ def registrar_gasto():
         nueva_categoria = str(nueva_categoria).strip()
 
     ahora = datetime.now()
-    fecha_hoy = ahora.strftime("%d/%m/%Y")
-    hora_actual = ahora.strftime("%H:%M")
+    fecha_hoy = me_fecha = ahora.strftime("%d/%m/%Y")
+    hora_actual = me_hora = ahora.strftime("%H:%M")
 
     try:
         doc = conectar_google_sheets()
@@ -229,17 +228,16 @@ def registrar_gasto():
                 })
 
         # ==========================================
-        # LÓGICA DE DIVISION EN CUOTAS HACIA EL FUTURO
+        # LÓGICA DE DIVISIÓN EN CUOTAS HACIA EL FUTURO
         # ==========================================
         medio_pago_final = f"Tarjeta - {tarjeta_nombre}" if medio_pago == 'Tarjeta' else medio_pago
 
-        if medio_pago == 'Tarjeta' and cuotas > 1:
+        if cuotas > 1:
             monto_por_cuota = monto / cuotas
             mes_actual_num = ahora.month
             
             filas_a_insertar = []
             for i in range(1, cuotas + 1):
-                # Calculamos el mes saltando hacia adelante, si pasa de diciembre vuelve a enero
                 mes_cuota_num = ((mes_actual_num + i - 2) % 12) + 1
                 nombre_mes_cuota = MESES[mes_cuota_num]
                 
@@ -250,11 +248,9 @@ def registrar_gasto():
                     moneda, categoria, nombre_mes_cuota, tipo, prescindible, medio_pago_final
                 ])
                 
-            # Insertamos todas las cuotas de golpe en la hoja
             hoja_transacciones.append_rows(filas_a_insertar, value_input_option='RAW')
             
         else:
-            # Gasto normal o tarjeta en 1 pago
             nombre_mes = MESES[ahora.month]
             concepto_final = f"{concepto} (1 pago)" if medio_pago == 'Tarjeta' else concepto
             
@@ -617,10 +613,7 @@ def obtener_metricas():
 
         # LISTADO DE GASTOS FIJOS DECLARADOS (SIN SANTANDER)
         GASTOS_FIJOS_DECLARADOS = [
-            "UTE", "PATENTE AUTO", "ANTEL", 
-            "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "OSE", 
-            "PRESTAMO OCA", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
-            "CAMILA VISA", "PRESTAMO ITAU", "JIU-JITSU", "CHACRA CUOTA"
+            "UTE", "OSE", "ANTEL", "PATENTE AUTO", "JIU-JITSU", "PRESTAMO OCA", "PRESTAMO MAMÁ", "PRESTAMO ITAU","TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", "CAMILA VISA", "CHACRA CUOTA"
         ]
 
         detalles_fijos = []
