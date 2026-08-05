@@ -556,10 +556,13 @@ window.editarSaldo = async function(medioPago, moneda) {
                             // Convertimos USD a UYU (tipo de cambio 40)
                             const gastadoTotalUYU = gastadoUYU + (gastadoUSD * 40);
 
-							// Obtener el límite: Prioridad 1 Google Sheet, 2 LocalStorage, 3 Por defecto (50000)
-							const limiteTotal = limitesDesdeSheet[t.nombre] || 
-                                                parseFloat(localStorage.getItem(`limite_${t.nombre}`)) || 
-                                                50000;
+							// Prioridad absoluta a Google Sheets si existe la tarjeta
+							let limiteTotal = 50000;
+                            if (limitesDesdeSheet[t.nombre] !== undefined && limitesDesdeSheet[t.nombre] > 0) {
+                                limiteTotal = limitesDesdeSheet[t.nombre];
+                            } else if (localStorage.getItem(`limite_${t.nombre}`)) {
+                                limiteTotal = parseFloat(localStorage.getItem(`limite_${t.nombre}`));
+                            }
 							
 							// Disponible real
 							const disponible = limiteTotal - gastadoTotalUYU;
@@ -764,7 +767,7 @@ window.editarSaldo = async function(medioPago, moneda) {
             console.error("Error cargando métricas", error);
         }
     }
-
+	
    // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
     cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });
