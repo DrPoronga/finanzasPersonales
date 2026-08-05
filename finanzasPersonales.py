@@ -249,7 +249,6 @@ def registrar_gasto():
         medio_pago_final = f"Tarjeta - {tarjeta_nombre}" if medio_pago == 'Tarjeta' else medio_pago
 
         if prestamo_coincidente and cuotas == 1 and medio_pago != 'Tarjeta':
-            # Formateamos automáticamente la cuota según el historial de pagos
             totales_p = int(prestamo_coincidente.get('Cuotas Totales', 1) or 1)
             inicial_p = int(prestamo_coincidente.get('Cuota Inicial', 1) or 1)
             
@@ -307,7 +306,7 @@ def registrar_gasto():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+
 import re
 
 def detectar_categoria(registros_cat, concepto_ingresado):
@@ -353,7 +352,7 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
         return True
 
     return False
-    
+
 @app.route('/obtener_metricas', methods=['GET'])
 @requiere_pin
 def obtener_metricas():
@@ -683,6 +682,14 @@ def obtener_metricas():
             p_nombre = str(p.get('Nombre Prestamo', '')).strip().upper()
             if not p_nombre:
                 continue
+
+            # VERIFICAR SI EL PRÉSTAMO YA EMPEZÓ EN EL MES SOLICITADO
+            mes_inicio_str = str(p.get('Mes Inicio', '')).strip().upper()
+            if mes_solicitado != "TODOS" and mes_inicio_str in MESES_INV and mes_solicitado in MESES_INV:
+                num_mes_inicio = MESES_INV[mes_inicio_str]
+                num_mes_solicitado = MESES_INV[mes_solicitado]
+                if num_mes_solicitado < num_mes_inicio:
+                    continue  # Aún no arrancó en este mes, no lo agregamos
 
             try:
                 monto_p = float(str(p.get('Monto Cuota', 0)).replace(',', '.').strip() or 0)
