@@ -204,6 +204,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 	
 window.editarSaldo = async function(medioPago, moneda) {
+    // ==========================================
+    // 1. EDICIÓN DE TARJETAS DE CRÉDITO
+    // ==========================================
     if (medioPago.includes('Tarjeta')) {
         const nombreTarjeta = medioPago.replace('Tarjeta - ', '').trim();
 
@@ -220,7 +223,7 @@ window.editarSaldo = async function(medioPago, moneda) {
             return;
         }
 
-        // Calculamos los gastos ya registrados en la app para este mes
+        // Calculamos los gastos ya registrados en la app para esta tarjeta
         let gastadoActualUYU = 0;
         if (window.gastosPorTarjetaCache && window.gastosPorTarjetaCache[nombreTarjeta]) {
             const uyu = window.gastosPorTarjetaCache[nombreTarjeta].UYU || 0;
@@ -244,7 +247,6 @@ window.editarSaldo = async function(medioPago, moneda) {
             const data = await res.json();
             if (res.ok && data.status === 'success') {
                 alert(`¡Listo! Disponible de ${nombreTarjeta} fijado en $${disponibleIngresado.toLocaleString('es-UY')}`);
-                // Forzamos la recarga desde Google Sheets
                 cargarMetricas(selectMesFiltro.value, true);
             } else {
                 alert(`Error al guardar: ${data.message || 'Error desconocido'}`);
@@ -255,8 +257,68 @@ window.editarSaldo = async function(medioPago, moneda) {
         return;
     }
 
-    // Comportamiento habitual para Banco y Tickets
-    await cargarMetricas(selectMesFiltro.value, true);
+    // ==========================================
+    // 2. EDICIÓN DE BANCO Y TICKETS (AJUSTE DE SALDO)
+    // ==========================================
+    let saldoActual = 0;
+    let etiquetaCuenta = medioPago;
+
+    if (medioPago === 'Banco') {
+        saldoActual = (moneda === 'USD') ? balanceUSDNum : balanceUYUNum;
+        etiquetaCuenta = `Banco (${moneda})`;
+    } else if (medioPago === 'Tickets') {
+        saldoActual = saldoTicketsDisponibleNum;
+        etiquetaCuenta = 'Tickets Alimentación';
+    }
+
+    const sim = (moneda === 'USD') ? 'US$' : '$';
+    const promptMsg = `=== AJUSTAR SALDO REAL (${etiquetaCuenta}) ===\n\n` +
+                      `Saldo actual en la app: ${sim}${saldoActual.toLocaleString('es-UY', {minimumFractionDigits: 0, maximumFractionDigits: 2})}\n\n` +
+                      `Ingresa el saldo REAL que tienes ahora mismo en tu cuenta:`;
+
+    const nuevoSaldoStr = prompt(promptMsg);
+    if (nuevoSaldoStr === null) return;
+
+    const nuevoSaldo = parseFloat(nuevoSaldoStr.replace(',', '.').trim());
+    if (isNaN(nuevoSaldo) || nuevoSaldo < 0) {
+        alert("Por favor ingresa un monto válido.");
+        return;
+    }
+
+    const diferencia = nuevoSaldo - saldoActual;
+    if (Math.abs(diferencia) < 0.01) {
+        alert("El saldo ingresado es igual al actual. No se requieren cambios.");
+        return;
+    }
+
+    const tipoAjuste = diferencia > 0 ? 'Activo' : 'Pasivo';
+    const montoAjuste = Math.abs(diferencia);
+
+    try {
+        const res = await fetch('/registrar_gasto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                concepto: 'Ajuste de Saldo',
+                monto: montoAjuste,
+                moneda: moneda,
+                tipo: tipoAjuste,
+                medio_pago: medioPago,
+                prescindible: false,
+                cuotas: 1
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.status === 'success') {
+            alert(`¡Saldo de ${etiquetaCuenta} actualizado a ${sim}${nuevoSaldo.toLocaleString('es-UY')}!`);
+            cargarMetricas(selectMesFiltro.value, true);
+        } else {
+            alert(`Error al ajustar saldo: ${data.message || 'Error desconocido'}`);
+        }
+    } catch (e) {
+        alert("Error de conexión al intentar registrar el ajuste de saldo.");
+    }
 };
 
     let conceptosCache = { pasivos: [], activos: [] };
@@ -808,9 +870,9 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
         const medio_pago = selectMedioPago.value;
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
         
-        // Atrapamos tarjeta y cuotas
+        // Atrapamos tarjeta y cuotas (ahora cuotas aplica para cualquier gasto/préstamo)
         const tarjeta = selectMedioPago.value === 'Tarjeta' ? selectTarjeta.value : '';
-        const cuotas = selectMedioPago.value === 'Tarjeta' ? parseInt(inputCuotas.value) || 1 : 1;
+        const cuotas = parseInt(inputCuotas.value) || 1;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
