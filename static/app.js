@@ -204,35 +204,44 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 	
 window.editarSaldo = async function(medioPago, moneda) {
-    // Si es una TARJETA, manejamos su límite de crédito de forma independiente
     if (medioPago.includes('Tarjeta')) {
         const nombreTarjeta = medioPago.replace('Tarjeta - ', '').trim();
-        const limiteActual = localStorage.getItem(`limite_${nombreTarjeta}`) || 50000;
 
         const promptMsg = `=== CONFIGURAR LÍMITE TOTAL (${nombreTarjeta}) ===\n\n` +
-                          `Ingresa el LÍMITE TOTAL DE CRÉDITO de tu tarjeta:`;
+                          `Ingresa el LÍMITE TOTAL DE CRÉDITO en pesos (UYU):\n` +
+                          `(Este valor se guardará en tu Google Sheet)`;
 
-        const nuevoLimiteStr = prompt(promptMsg, limiteActual);
+        const nuevoLimiteStr = prompt(promptMsg);
         if (nuevoLimiteStr === null) return;
 
-        const nuevoLimite = parseFloat(nuevoLimiteStr.replace(',', '.'));
+        const nuevoLimite = parseFloat(nuevoLimiteStr.replace(',', '.').trim());
         if (isNaN(nuevoLimite) || nuevoLimite <= 0) {
             alert("Por favor ingresa un monto válido.");
             return;
         }
 
-        // Guardamos el límite total de esta tarjeta específica
-        localStorage.setItem(`limite_${nombreTarjeta}`, nuevoLimite);
-        alert(`Límite de ${nombreTarjeta} actualizado a $${nuevoLimite.toLocaleString('es-UY')}`);
-        
-        // Recargamos métricas para recalcular el disponible
-        cargarMetricas(selectMesFiltro.value, true);
+        try {
+            const res = await fetch('/actualizar_limite_tarjeta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tarjeta: nombreTarjeta, limite: nuevoLimite })
+            });
+
+            const data = await res.json();
+            if (res.ok && data.status === 'success') {
+                alert(`Límite de ${nombreTarjeta} guardado en Google Sheets: $${nuevoLimite.toLocaleString('es-UY')}`);
+                cargarMetricas(selectMesFiltro.value, true);
+            } else {
+                alert(`Error al guardar: ${data.message || 'Error desconocido'}`);
+            }
+        } catch (e) {
+            alert("Error de conexión al intentar guardar en Google Sheets.");
+        }
         return;
     }
 
-    // --- A PARTIR DE AQUÍ SIGUE TU CÓDIGO ORIGINAL PARA BANCO Y TICKETS ---
+    // Comportamiento habitual para Banco y Tickets
     await cargarMetricas(selectMesFiltro.value, true);
-    // ... (el resto del código de editarSaldo se mantiene igual para Banco/Tickets)
 };
 
     let conceptosCache = { pasivos: [], activos: [] };
@@ -535,23 +544,31 @@ window.editarSaldo = async function(medioPago, moneda) {
 						{ id: 'lblDispSantander', nombre: 'VISA SANTANDER' }
 					];
 
+                    const limitesDesdeSheet = data.limites_tarjetas || {};
+
 					tarjetasConfig.forEach(t => {
 						const elem = document.getElementById(t.id);
 						if (elem) {
-							// Obtenemos lo gastado en el mes según la base de datos
-							const gastado = data.gastos_por_tarjeta[t.nombre] ? data.gastos_por_tarjeta[t.nombre].UYU : 0;
+							// Obtenemos gastos en UYU y USD
+							const gastadoUYU = data.gastos_por_tarjeta[t.nombre] ? (data.gastos_por_tarjeta[t.nombre].UYU || 0) : 0;
+                            const gastadoUSD = data.gastos_por_tarjeta[t.nombre] ? (data.gastos_por_tarjeta[t.nombre].USD || 0) : 0;
 							
-							// Obtenemos el límite total configurado para esta tarjeta (por defecto 50.000)
-							const limite = parseFloat(localStorage.getItem(`limite_${t.nombre}`)) || 50000;
+                            // Convertimos USD a UYU (tipo de cambio 40)
+                            const gastadoTotalUYU = gastadoUYU + (gastadoUSD * 40);
+
+							// Obtener el límite: Prioridad 1 Google Sheet, 2 LocalStorage, 3 Por defecto (50000)
+							const limiteTotal = limitesDesdeSheet[t.nombre] || 
+                                                parseFloat(localStorage.getItem(`limite_${t.nombre}`)) || 
+                                                50000;
 							
-							// Crédito realmente disponible
-							const disponible = limite - gastado;
+							// Disponible real
+							const disponible = limiteTotal - gastadoTotalUYU;
 
 							elem.textContent = `$${disponible.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
 							
-							// Cambiamos el color si le queda poco crédito
+							// Cambiar color si queda poco saldo
 							if (disponible < 5000) {
-								elem.style.color = '#DC2626'; // Rojo si le queda poco
+								elem.style.color = '#DC2626';
 							} else {
 								elem.style.color = 'var(--text)';
 							}
@@ -746,8 +763,7 @@ window.editarSaldo = async function(medioPago, moneda) {
         } catch (error) {
             console.error("Error cargando métricas", error);
         }
-    }	
-   
+    }
 
    // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
