@@ -35,14 +35,10 @@ MESES = {
 # ==========================================
 # 2. CACHÉ EN MEMORIA (RENDIMIENTO)
 # ==========================================
-SESSIONS_CACHE = {
-    "client": None,
-    "doc": None
-}
-
 DATA_CACHE = {
     "transacciones": None,
     "categorias": None,
+    "tarjetas": None,
     "timestamp": 0
 }
 CACHE_TTL = 300  # TTL de 5 minutos
@@ -50,6 +46,21 @@ CACHE_TTL = 300  # TTL de 5 minutos
 def invalidar_cache():
     DATA_CACHE["transacciones"] = None
     DATA_CACHE["categorias"] = None
+    DATA_CACHE["tarjetas"] = None
+    DATA_CACHE["timestamp"] = 0
+
+DATA_CACHE = {
+    "transacciones": None,
+    "categorias": None,
+    "tarjetas": None,
+    "timestamp": 0
+}
+CACHE_TTL = 300  # TTL de 5 minutos
+
+def invalidar_cache():
+    DATA_CACHE["transacciones"] = None
+    DATA_CACHE["categorias"] = None
+    DATA_CACHE["tarjetas"] = None
     DATA_CACHE["timestamp"] = 0
 
 # ==========================================
@@ -98,18 +109,25 @@ def obtener_registros_cached():
     
     if (DATA_CACHE["transacciones"] is not None and 
         DATA_CACHE["categorias"] is not None and 
+        DATA_CACHE["tarjetas"] is not None and
         (ahora_ts - DATA_CACHE["timestamp"]) < CACHE_TTL):
-        return DATA_CACHE["transacciones"], DATA_CACHE["categorias"]
+        return DATA_CACHE["transacciones"], DATA_CACHE["categorias"], DATA_CACHE["tarjetas"]
 
     doc = conectar_google_sheets()
     transacciones = doc.worksheet("Transacciones").get_all_records()
     categorias = doc.worksheet("Categorias").get_all_records()
+    
+    try:
+        tarjetas = doc.worksheet("Tarjetas").get_all_records()
+    except Exception:
+        tarjetas = []
 
     DATA_CACHE["transacciones"] = transacciones
     DATA_CACHE["categorias"] = categorias
+    DATA_CACHE["tarjetas"] = tarjetas
     DATA_CACHE["timestamp"] = ahora_ts
 
-    return transacciones, categorias
+    return transacciones, categorias, tarjetas
 
 def requiere_pin(f):
     @wraps(f)
@@ -201,13 +219,13 @@ def registrar_gasto():
 
         if nueva_categoria:
             categoria = nueva_categoria
-            _, registros_cat = obtener_registros_cached()
+            _, registros_cat, _ = obtener_registros_cached()
             ya_existe = any(str(r.get('Palabra Clave', '')).lower().strip() == concepto.lower() for r in registros_cat)
             
             if not ya_existe:
                 hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
-            _, registros_cat = obtener_registros_cached()
+            _, registros_cat, _ = obtener_registros_cached()
             categoria = detectar_categoria(registros_cat, concepto)
 
             if not categoria:
@@ -330,7 +348,7 @@ def obtener_metricas():
         if force_reload:
             invalidar_cache()
 
-        registros, _ = obtener_registros_cached()
+        registros, _, tarjetas_registros = obtener_registros_cached()
 
         ahora = datetime.now()
         mes_actual_nombre = MESES[ahora.month]
@@ -677,6 +695,17 @@ def obtener_metricas():
                 for t_nombre in gastos_por_tarjeta.keys():
                     if t_nombre in medio_raw.upper():
                         gastos_por_tarjeta[t_nombre][mon_r] += monto_r
+
+        # Mapear límites configurados en Google Sheets
+        limites_tarjetas = {}
+        for t in tarjetas_registros:
+            nombre_t = str(t.get('Nombre Tarjeta', '')).strip().upper()
+            try:
+                limite_val = float(str(t.get('Limite UYU', 0)).replace(',', '.').strip())
+            except (ValueError, TypeError):
+                limite_val = 50000.0
+            if nombre_t:
+                limites_tarjetas[nombre_t] = limite_val
                         
         return jsonify({
             "status": "success",
@@ -715,7 +744,8 @@ def obtener_metricas():
             "desglose_conceptos": desglose_conceptos,
             "detalles": detalles_filtrados,
             "fijos": detalles_fijos,
-            "gastos_por_tarjeta": gastos_por_tarjeta  # <-- ¡Aquí estaba el faltante!
+            "gastos_por_tarjeta": gastos_por_tarjeta,
+            "limites_tarjetas": limites_tarjetas
         })
 
     except Exception as e:
@@ -728,7 +758,7 @@ def obtener_metricas():
 @requiere_pin
 def obtener_conceptos():
     try:
-        registros, _ = obtener_registros_cached()
+        registros, _, _ = obtener_registros_cached()
         
         # Filtramos y normalizamos conceptos únicos en formato Title
         pasivos = set()
@@ -748,6 +778,42 @@ def obtener_conceptos():
             "pasivos": sorted(list(pasivos)),
             "activos": sorted(list(activos))
         })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+      
+@app.route('/actualizar_limite_tarjeta', methods=['POST'])
+@requiere_pin
+def actualizar_limite_tarjeta():
+    datos = request.get_json() or {}
+    tarjeta_nombre = str(datos.get('tarjeta', '')).strip().upper()
+    try:
+        nuevo_limite = float(datos.get('limite', 0))
+        if nuevo_limite <= 0:
+            return jsonify({"status": "error", "message": "Monto inválido"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "Monto no válido"}), 400
+
+    try:
+        doc = conectar_google_sheets()
+        hoja = doc.worksheet("Tarjetas")
+        registros = hoja.get_all_records()
+
+        fila_encontrada = None
+        for idx, r in enumerate(registros, start=2):  # La fila 1 es el encabezado
+            if str(r.get('Nombre Tarjeta', '')).strip().upper() == tarjeta_nombre:
+                fila_encontrada = idx
+                break
+
+        if fila_encontrada:
+            # Columna 2 es 'Limite UYU'
+            hoja.update_cell(fila_encontrada, 2, nuevo_limite)
+        else:
+            # Si la tarjeta no existía en la hoja, la creamos
+            hoja.append_row([tarjeta_nombre, nuevo_limite, 15], value_input_option='RAW')
+
+        invalidar_cache()
+        return jsonify({"status": "success", "message": "Límite actualizado en Google Sheets"})
+
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
         
