@@ -44,6 +44,7 @@ DATA_CACHE = {
     "transacciones": None,
     "categorias": None,
     "tarjetas": None,
+    "prestamos": None,
     "timestamp": 0
 }
 CACHE_TTL = 300  # TTL de 5 minutos
@@ -52,6 +53,7 @@ def invalidar_cache():
     DATA_CACHE["transacciones"] = None
     DATA_CACHE["categorias"] = None
     DATA_CACHE["tarjetas"] = None
+    DATA_CACHE["prestamos"] = None
     DATA_CACHE["timestamp"] = 0
 
 # ==========================================
@@ -101,8 +103,9 @@ def obtener_registros_cached():
     if (DATA_CACHE["transacciones"] is not None and 
         DATA_CACHE["categorias"] is not None and 
         DATA_CACHE["tarjetas"] is not None and
+        DATA_CACHE["prestamos"] is not None and
         (ahora_ts - DATA_CACHE["timestamp"]) < CACHE_TTL):
-        return DATA_CACHE["transacciones"], DATA_CACHE["categorias"], DATA_CACHE["tarjetas"]
+        return DATA_CACHE["transacciones"], DATA_CACHE["categorias"], DATA_CACHE["tarjetas"], DATA_CACHE["prestamos"]
 
     doc = conectar_google_sheets()
     transacciones = doc.worksheet("Transacciones").get_all_records()
@@ -113,12 +116,18 @@ def obtener_registros_cached():
     except Exception:
         tarjetas = []
 
+    try:
+        prestamos = doc.worksheet("Prestamos").get_all_records()
+    except Exception:
+        prestamos = []
+
     DATA_CACHE["transacciones"] = transacciones
     DATA_CACHE["categorias"] = categorias
     DATA_CACHE["tarjetas"] = tarjetas
-    DATA_CACHE["timestamp"] = me_ts = ahora_ts
+    DATA_CACHE["prestamos"] = prestamos
+    DATA_CACHE["timestamp"] = ahora_ts
 
-    return transacciones, categorias, tarjetas
+    return transacciones, categorias, tarjetas, prestamos
 
 def requiere_pin(f):
     @wraps(f)
@@ -197,8 +206,8 @@ def registrar_gasto():
         nueva_categoria = str(nueva_categoria).strip()
 
     ahora = datetime.now()
-    fecha_hoy = me_fecha = ahora.strftime("%d/%m/%Y")
-    hora_actual = me_hora = ahora.strftime("%H:%M")
+    fecha_hoy = ahora.strftime("%d/%m/%Y")
+    hora_actual = ahora.strftime("%H:%M")
 
     try:
         doc = conectar_google_sheets()
@@ -209,13 +218,13 @@ def registrar_gasto():
 
         if nueva_categoria:
             categoria = nueva_categoria
-            _, registros_cat, _ = obtener_registros_cached()
+            _, registros_cat, _, prestamos_registros = obtener_registros_cached()
             ya_existe = any(str(r.get('Palabra Clave', '')).lower().strip() == concepto.lower() for r in registros_cat)
             
             if not ya_existe:
                 hoja_categorias.append_row([concepto.lower(), categoria, tipo])
         else:
-            _, registros_cat, _ = obtener_registros_cached()
+            _, registros_cat, _, prestamos_registros = obtener_registros_cached()
             categoria = detectar_categoria(registros_cat, concepto)
 
             if not categoria:
@@ -228,11 +237,35 @@ def registrar_gasto():
                 })
 
         # ==========================================
-        # LÓGICA DE DIVISIÓN EN CUOTAS HACIA EL FUTURO
+        # AUTO-DETECCIÓN DE PRÉSTAMO REGISTRADO
         # ==========================================
+        prestamo_coincidente = None
+        for p in prestamos_registros:
+            p_nom = str(p.get('Nombre Prestamo', '')).strip().upper()
+            if p_nom and p_nom == concepto.upper():
+                prestamo_coincidente = p
+                break
+
         medio_pago_final = f"Tarjeta - {tarjeta_nombre}" if medio_pago == 'Tarjeta' else medio_pago
 
-        if cuotas > 1:
+        if prestamo_coincidente and cuotas == 1 and medio_pago != 'Tarjeta':
+            # Formateamos automáticamente la cuota según el historial de pagos
+            totales_p = int(prestamo_coincidente.get('Cuotas Totales', 1) or 1)
+            inicial_p = int(prestamo_coincidente.get('Cuota Inicial', 1) or 1)
+            
+            tx_actuales = hoja_transacciones.get_all_records()
+            pagos_previos = sum(1 for r in tx_actuales if str(r.get('Concepto', '')).strip().upper().startswith(concepto.upper()))
+            
+            cuota_actual_num = inicial_p + pagos_previos
+            concepto_final = f"{concepto} (Cuota {cuota_actual_num} de {totales_p})"
+            nombre_mes = MESES[ahora.month]
+
+            hoja_transacciones.append_row(
+                [fecha_hoy, hora_actual, concepto_final, monto, moneda, "PRESTAMO", nombre_mes, tipo, prescindible, medio_pago_final],
+                value_input_option='RAW'
+            )
+
+        elif cuotas > 1:
             monto_por_cuota = monto / cuotas
             mes_actual_num = ahora.month
             
@@ -275,14 +308,13 @@ def registrar_gasto():
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
         
-import re  # <-- Asegúrate de incluir esta importación al principio del archivo
+import re
 
 def detectar_categoria(registros_cat, concepto_ingresado):
     try:
         concepto_lower = concepto_ingresado.lower().strip()
         for fila in registros_cat:
             palabra_clave = str(fila.get('Palabra Clave', '')).lower().strip()
-            # Búsqueda con límites de palabra para evitar falsos positivos
             if palabra_clave and re.search(r'\b' + re.escape(palabra_clave) + r'\b', concepto_lower):
                 return fila.get('Categoria', 'Varios')
     except Exception as e:
@@ -290,11 +322,6 @@ def detectar_categoria(registros_cat, concepto_ingresado):
         
     return None
 
-import re
-
-# ==========================================
-# AYUDANTES DE NORMALIZACIÓN Y DETECCIÓN
-# ==========================================
 def normalizar_moneda(m):
     m_str = str(m or '').strip().upper()
     if m_str in ['USD', 'US$', 'DOLARES', 'DOLAR', 'U$S']:
@@ -309,7 +336,6 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
     c = str(concepto_r or '').strip().upper()
     f = str(fijo_nombre or '').strip().upper()
 
-    # Diccionario de alias exactos
     ALIAS_EXACTOS = {
         "PATENTE AUTO": ["PATENTE"],
         "CHACRA CUOTA": ["CHACRA"],
@@ -317,15 +343,12 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
         "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
     }
 
-    # 1. Coincidencia exacta de la cadena completa
     if c == f:
         return True
 
-    # 2. Coincidencia con alias exacto autorizado
     if f in ALIAS_EXACTOS and c in ALIAS_EXACTOS[f]:
         return True
 
-    # 3. Coincidencia para cuotas (ej: "PRESTAMO MAMÁ (Cuota 1 de 24)")
     if c.startswith(f):
         return True
 
@@ -339,7 +362,7 @@ def obtener_metricas():
         if force_reload:
             invalidar_cache()
 
-        registros, _, tarjetas_registros = obtener_registros_cached()
+        registros, _, tarjetas_registros, prestamos_registros = obtener_registros_cached()
 
         ahora = datetime.now()
         mes_actual_nombre = MESES[ahora.month]
@@ -352,16 +375,13 @@ def obtener_metricas():
             num_mes_prev = 12 if num_mes == 1 else num_mes - 1
             mes_prev_nombre = MESES[num_mes_prev]
 
-        # Acumulados de saldo disponible (Banco y Tickets)
         ingresos_acum_usd, gastos_acum_usd = 0.0, 0.0
         ingresos_acum_uyu, gastos_acum_uyu = 0.0, 0.0
         ingresos_tickets_uyu, gastos_tickets_uyu = 0.0, 0.0
 
-        # Totales mes filtrado (sin ajustes)
         ingresos_filtrado_usd, gastos_filtrado_usd, prescindible_filtrado_usd = 0.0, 0.0, 0.0
         ingresos_filtrado_uyu, gastos_filtrado_uyu, prescindible_filtrado_uyu = 0.0, 0.0, 0.0
         
-        # Totales mes anterior
         ingresos_prev_usd, gastos_prev_usd = 0.0, 0.0
         ingresos_prev_uyu, gastos_prev_uyu = 0.0, 0.0
 
@@ -381,7 +401,7 @@ def obtener_metricas():
         
         gastado_semana_actual_uyu = 0.0
         gastado_semana_actual_usd = 0.0
-        inicio_semana_actual = me_actual_date = ahora.date() - timedelta(days=ahora.weekday())
+        inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
 
         for r in registros:
             try:
@@ -398,12 +418,10 @@ def obtener_metricas():
             mes_registro = str(r.get('Mes', '')).strip().upper()
             fecha_str = str(r.get('Fecha', '')).strip()
 
-            # DETECCIÓN DE AJUSTES DE SALDO
             cat_upper = cat.upper()
             concepto_upper = concepto_raw.upper()
             es_ajuste = (cat_upper == "AJUSTE") or ("AJUSTE" in concepto_upper)
 
-            # 1. NORMALIZACIÓN DE MEDIOS DE PAGO
             medio_pago_raw = str(r.get('Cuenta') or r.get('Medio de Pago') or 'Banco').strip()
 
             if 'Tickets' in medio_pago_raw:
@@ -430,13 +448,12 @@ def obtener_metricas():
                     dt = datetime.strptime(fecha_str, "%d/%m/%Y").date()
                     fechas_prescindibles.append(dt)
 
-                    if dt >= me_actual_date:
+                    if dt >= inicio_semana_actual:
                         if moneda == 'USD': gastado_semana_actual_usd += monto
                         else: gastado_semana_actual_uyu += monto
                 except ValueError:
                     pass
 
-            # 2. SEPARACIÓN DE SALDOS ACUMULADOS REALES (Banco vs Tickets vs Tarjeta)
             if medio_pago_tipo == 'Tickets':
                 if not es_pasivo(tipo): 
                     ingresos_tickets_uyu += monto
@@ -450,7 +467,6 @@ def obtener_metricas():
                     if not es_pasivo(tipo): ingresos_acum_uyu += monto
                     else: gastos_acum_uyu += monto
 
-            # 3. PRONÓSTICO DE GASTOS FIJOS (Sin Santander)
             if medio_pago_tipo != 'Tickets' and es_pasivo(tipo) and es_no_prescindible and mes_registro and not es_ajuste:
                 if mes_registro != mes_actual_nombre:
                     if cat not in historial_fijos[moneda]:
@@ -459,7 +475,6 @@ def obtener_metricas():
                 else:
                     pagado_fijos_mes_actual[moneda][cat] = pagado_fijos_mes_actual[moneda].get(cat, 0.0) + monto
 
-            # 4. COMPARATIVA MES ANTERIOR (Sin ajustes)
             if mes_prev_nombre and mes_registro == mes_prev_nombre and not es_ajuste:
                 if not es_pasivo(tipo):
                     if moneda == 'USD': ingresos_prev_usd += monto
@@ -468,7 +483,6 @@ def obtener_metricas():
                     if moneda == 'USD': gastos_prev_usd += monto
                     else: gastos_prev_uyu += monto
 
-            # 5. FILTRO POR MES SOLICITADO
             es_mes_valido = (mes_solicitado == "TODOS") or (mes_registro == mes_solicitado)
             if es_mes_valido:
                 if fecha_str:
@@ -523,7 +537,7 @@ def obtener_metricas():
 
         pct_prescindible_utilizado = min(100.0, (prescindible_filtrado_uyu / meta_mensual_prescindible_uyu * 100)) if meta_mensual_prescindible_uyu > 0 else 0.0
 
-        hoy_date = me_actual_date = ahora.date()
+        hoy_date = ahora.date()
         if not fechas_prescindibles:
             racha_dias = 30
         else:
@@ -549,10 +563,9 @@ def obtener_metricas():
             if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
             else: compromisos_pendientes_uyu = pendientes_totales
 
-        # DISPONIBLE PARA HOY
         disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
         if mes_solicitado == mes_actual_nombre:
-            dias_totales_mes = calendar.monthrange(ahora.year, me_num := ahora.month)[1]
+            dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
             dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
             
             neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
@@ -615,9 +628,11 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
-        # LISTADO DE GASTOS FIJOS DECLARADOS (SIN SANTANDER)
+        # 1. GASTOS FIJOS ESTÁNDAR
         GASTOS_FIJOS_DECLARADOS = [
-            "UTE", "OSE", "ANTEL", "PATENTE AUTO", "JIU-JITSU", "PRESTAMO OCA", "PRESTAMO MAMÁ", "PRESTAMO ITAU","TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", "CAMILA VISA", "CHACRA CUOTA"
+            "UTE", "OSE", "ANTEL", "PATENTE AUTO", "JIU-JITSU",
+            "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
+            "CAMILA VISA", "CHACRA CUOTA"
         ]
 
         detalles_fijos = []
@@ -663,9 +678,68 @@ def obtener_metricas():
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
 
+        # 2. CONTROL DINÁMICO DE PRÉSTAMOS DESDE LA PESTAÑA `Prestamos`
+        for p in prestamos_registros:
+            p_nombre = str(p.get('Nombre Prestamo', '')).strip().upper()
+            if not p_nombre:
+                continue
+
+            try:
+                monto_p = float(str(p.get('Monto Cuota', 0)).replace(',', '.').strip() or 0)
+            except ValueError:
+                monto_p = 0.0
+
+            moneda_p = normalizar_moneda(p.get('Moneda'))
+            
+            try:
+                totales_p = int(p.get('Cuotas Totales', 1) or 1)
+            except ValueError:
+                totales_p = 1
+
+            try:
+                inicial_p = int(p.get('Cuota Inicial', 1) or 1)
+            except ValueError:
+                inicial_p = 1
+
+            fue_pagado = False
+            monto_pagado = 0.0
+            concepto_pagado_texto = ""
+            pagos_anteriores = 0
+
+            for r in registros:
+                tipo_r = r.get('Tipo', '')
+                concepto_r = str(r.get('Concepto', '')).strip().upper()
+                monto_r = float(str(r.get('Monto', 0)).replace(',', '.') or 0)
+                mes_r = str(r.get('Mes', '')).strip().upper()
+
+                if es_pasivo(tipo_r) and concepto_r.startswith(p_nombre):
+                    if (mes_solicitado == "TODOS") or (mes_r == mes_solicitado):
+                        fue_pagado = True
+                        monto_pagado = monto_r
+                        concepto_pagado_texto = concepto_r
+                    else:
+                        if mes_r != mes_solicitado:
+                            pagos_anteriores += 1
+
+            if fue_pagado:
+                concepto_fijo = concepto_pagado_texto if concepto_pagado_texto else p_nombre
+                monto_final = monto_pagado if monto_pagado > 0 else monto_p
+            else:
+                cuota_pendiente = inicial_p + pagos_anteriores
+                if cuota_pendiente > totales_p:
+                    cuota_pendiente = totales_p
+                concepto_fijo = f"{p_nombre} (Cuota {cuota_pendiente} de {totales_p})"
+                monto_final = monto_p
+
+            detalles_fijos.append({
+                "concepto": concepto_fijo,
+                "moneda": moneda_p,
+                "monto_pagado": monto_final,
+                "estado": "Pagado" if fue_pagado else "Pendiente"
+            })
+
         detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
         
-        # Acumular consumo por tarjeta en el mes seleccionado (SOLO BBVA Y OCA)
         gastos_por_tarjeta = {
             "VISA BBVA": {"UYU": 0.0, "USD": 0.0},
             "MASTERCARD OCA": {"UYU": 0.0, "USD": 0.0}
@@ -684,7 +758,6 @@ def obtener_metricas():
                     if t_nombre in medio_raw.upper():
                         gastos_por_tarjeta[t_nombre][mon_r] += monto_r
 
-        # Mapear límites configurados en Google Sheets
         limites_tarjetas = {}
         for t in tarjetas_registros:
             nombre_t = str(t.get('Nombre Tarjeta', '')).strip().upper()
@@ -741,14 +814,13 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+
 @app.route('/obtener_conceptos', methods=['GET'])
 @requiere_pin
 def obtener_conceptos():
     try:
-        registros, _, _ = obtener_registros_cached()
+        registros, _, _, _ = obtener_registros_cached()
         
-        # Filtramos y normalizamos conceptos únicos en formato Title
         pasivos = set()
         activos = set()
         
@@ -768,7 +840,7 @@ def obtener_conceptos():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-      
+
 @app.route('/actualizar_limite_tarjeta', methods=['POST'])
 @requiere_pin
 def actualizar_limite_tarjeta():
@@ -787,16 +859,14 @@ def actualizar_limite_tarjeta():
         registros = hoja.get_all_records()
 
         fila_encontrada = None
-        for idx, r in enumerate(registros, start=2):  # La fila 1 es el encabezado
+        for idx, r in enumerate(registros, start=2):
             if str(r.get('Nombre Tarjeta', '')).strip().upper() == tarjeta_nombre:
                 fila_encontrada = idx
                 break
 
         if fila_encontrada:
-            # Columna 2 es 'Limite UYU'
             hoja.update_cell(fila_encontrada, 2, nuevo_limite)
         else:
-            # Si la tarjeta no existía en la hoja, la creamos
             hoja.append_row([tarjeta_nombre, nuevo_limite, 15], value_input_option='RAW')
 
         invalidar_cache()
@@ -804,6 +874,6 @@ def actualizar_limite_tarjeta():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-        
+
 if __name__ == '__main__':
     app.run(debug=True)
