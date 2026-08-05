@@ -325,6 +325,10 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
     if f in ALIAS_EXACTOS and c in ALIAS_EXACTOS[f]:
         return True
 
+    # 3. Coincidencia para cuotas (ej: "PRESTAMO MAMÁ (Cuota 1 de 24)")
+    if c.startswith(f):
+        return True
+
     return False
     
 @app.route('/obtener_metricas', methods=['GET'])
