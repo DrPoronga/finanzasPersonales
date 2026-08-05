@@ -207,29 +207,41 @@ window.editarSaldo = async function(medioPago, moneda) {
     if (medioPago.includes('Tarjeta')) {
         const nombreTarjeta = medioPago.replace('Tarjeta - ', '').trim();
 
-        const promptMsg = `=== CONFIGURAR LÍMITE TOTAL (${nombreTarjeta}) ===\n\n` +
-                          `Ingresa el LÍMITE TOTAL DE CRÉDITO en pesos (UYU):\n` +
-                          `(Este valor se guardará en tu Google Sheet)`;
+        const promptMsg = `=== AJUSTAR CRÉDITO DISPONIBLE (${nombreTarjeta}) ===\n\n` +
+                          `¿Cuánto crédito DISPONIBLE te queda AHORA MISMO en la app del banco?\n` +
+                          `(Ejemplo: Si en tu banco te quedan $2500 para gastar, ingresa 2500)`;
 
-        const nuevoLimiteStr = prompt(promptMsg);
-        if (nuevoLimiteStr === null) return;
+        const disponibleIngresadoStr = prompt(promptMsg);
+        if (disponibleIngresadoStr === null) return;
 
-        const nuevoLimite = parseFloat(nuevoLimiteStr.replace(',', '.').trim());
-        if (isNaN(nuevoLimite) || nuevoLimite <= 0) {
+        const disponibleIngresado = parseFloat(disponibleIngresadoStr.replace(',', '.').trim());
+        if (isNaN(disponibleIngresado) || disponibleIngresado < 0) {
             alert("Por favor ingresa un monto válido.");
             return;
         }
+
+        // Calculamos los gastos ya registrados en la app para este mes
+        let gastadoActualUYU = 0;
+        if (window.gastosPorTarjetaCache && window.gastosPorTarjetaCache[nombreTarjeta]) {
+            const uyu = window.gastosPorTarjetaCache[nombreTarjeta].UYU || 0;
+            const usd = window.gastosPorTarjetaCache[nombreTarjeta].USD || 0;
+            gastadoActualUYU = uyu + (usd * 40);
+        }
+
+        // Para que en pantalla quede EXACTAMENTE el disponible que ingresaste,
+        // guardamos el límite ajustado en Google Sheets
+        const limiteCalculado = disponibleIngresado + gastadoActualUYU;
 
         try {
             const res = await fetch('/actualizar_limite_tarjeta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tarjeta: nombreTarjeta, limite: nuevoLimite })
+                body: JSON.stringify({ tarjeta: nombreTarjeta, limite: limiteCalculado })
             });
 
             const data = await res.json();
             if (res.ok && data.status === 'success') {
-                alert(`Límite de ${nombreTarjeta} guardado en Google Sheets: $${nuevoLimite.toLocaleString('es-UY')}`);
+                alert(`¡Listo! Disponible de ${nombreTarjeta} fijado en $${disponibleIngresado.toLocaleString('es-UY')}`);
                 cargarMetricas(selectMesFiltro.value, true);
             } else {
                 alert(`Error al guardar: ${data.message || 'Error desconocido'}`);
@@ -518,7 +530,7 @@ window.editarSaldo = async function(medioPago, moneda) {
         modalDetalle.classList.remove('hidden');
     }
 	
-	async function cargarMetricas(mesSeleccionado = '', force = false) {
+async function cargarMetricas(mesSeleccionado = '', force = false) {
         try {
             let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
             if (force) {
@@ -538,6 +550,8 @@ window.editarSaldo = async function(medioPago, moneda) {
 				// CÁLCULO DE CRÉDITO DISPONIBLE POR TARJETA
 				// ==========================================
 				if (data.gastos_por_tarjeta) {
+                    window.gastosPorTarjetaCache = data.gastos_por_tarjeta;
+
 					const tarjetasConfig = [
 						{ id: 'lblDispBBVA', nombre: 'VISA BBVA' },
 						{ id: 'lblDispOCA', nombre: 'MASTERCARD OCA' },
