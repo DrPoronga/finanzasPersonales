@@ -35,19 +35,10 @@ MESES = {
 # ==========================================
 # 2. CACHÉ EN MEMORIA (RENDIMIENTO)
 # ==========================================
-DATA_CACHE = {
-    "transacciones": None,
-    "categorias": None,
-    "tarjetas": None,
-    "timestamp": 0
+SESSIONS_CACHE = {
+    "client": None,
+    "doc": None
 }
-CACHE_TTL = 300  # TTL de 5 minutos
-
-def invalidar_cache():
-    DATA_CACHE["transacciones"] = None
-    DATA_CACHE["categorias"] = None
-    DATA_CACHE["tarjetas"] = None
-    DATA_CACHE["timestamp"] = 0
 
 DATA_CACHE = {
     "transacciones": None,
@@ -125,7 +116,7 @@ def obtener_registros_cached():
     DATA_CACHE["transacciones"] = transacciones
     DATA_CACHE["categorias"] = categorias
     DATA_CACHE["tarjetas"] = tarjetas
-    DATA_CACHE["timestamp"] = ahora_ts
+    DATA_CACHE["timestamp"] = me_ts = ahora_ts
 
     return transacciones, categorias, tarjetas
 
