@@ -779,8 +779,8 @@ def actualizar_limite_tarjeta():
     tarjeta_nombre = str(datos.get('tarjeta', '')).strip().upper()
     try:
         nuevo_limite = float(datos.get('limite', 0))
-        if nuevo_limite <= 0:
-            return jsonify({"status": "error", "message": "Monto inválido"}), 400
+        if nuevo_limite < 0:
+            return jsonify({"status": "error", "message": "El monto no puede ser negativo"}), 400
     except (ValueError, TypeError):
         return jsonify({"status": "error", "message": "Monto no válido"}), 400
 
