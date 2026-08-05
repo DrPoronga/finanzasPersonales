@@ -337,7 +337,6 @@ def coincide_gasto_fijo(fijo_nombre, concepto_r):
 
     ALIAS_EXACTOS = {
         "PATENTE AUTO": ["PATENTE"],
-        "CHACRA CUOTA": ["CHACRA"],
         "CAMILA VISA": ["VISA CAMILA", "TARJETA CAMILA"],
         "JIU-JITSU": ["JIU JITSU", "JIUJITSU"]
     }
@@ -631,7 +630,7 @@ def obtener_metricas():
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "OSE", "ANTEL", "PATENTE AUTO", "JIU-JITSU",
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
-            "CAMILA VISA", "CHACRA CUOTA"
+            "CAMILA VISA"
         ]
 
         detalles_fijos = []
