@@ -611,52 +611,7 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
                 balanceUSDNum = data.balance_usd_num || 0;
                 saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
 
-                // ==========================================
-				// CÁLCULO DE CRÉDITO DISPONIBLE POR TARJETA
-				// ==========================================
-				if (data.gastos_por_tarjeta) {
-                    window.gastosPorTarjetaCache = data.gastos_por_tarjeta;
-
-					const tarjetasConfig = [
-						{ id: 'lblDispBBVA', nombre: 'VISA BBVA' },
-						{ id: 'lblDispOCA', nombre: 'MASTERCARD OCA' }
-					];
-
-                    const limitesDesdeSheet = data.limites_tarjetas || {};
-
-					tarjetasConfig.forEach(t => {
-						const elem = document.getElementById(t.id);
-						if (elem) {
-							// Obtenemos gastos en UYU y USD
-							const gastadoUYU = data.gastos_por_tarjeta[t.nombre] ? (data.gastos_por_tarjeta[t.nombre].UYU || 0) : 0;
-                            const gastadoUSD = data.gastos_por_tarjeta[t.nombre] ? (data.gastos_por_tarjeta[t.nombre].USD || 0) : 0;
-							
-                            // Convertimos USD a UYU (tipo de cambio 40)
-                            const gastadoTotalUYU = gastadoUYU + (gastadoUSD * 40);
-
-							// Prioridad a Google Sheets si existe la tarjeta
-							let limiteTotal = 50000;
-                            if (limitesDesdeSheet[t.nombre] !== undefined && limitesDesdeSheet[t.nombre] !== null && !isNaN(limitesDesdeSheet[t.nombre])) {
-                                limiteTotal = parseFloat(limitesDesdeSheet[t.nombre]);
-                            } else if (localStorage.getItem(`limite_${t.nombre}`)) {
-                                limiteTotal = parseFloat(localStorage.getItem(`limite_${t.nombre}`));
-                            }
-							
-							// Disponible real
-							const disponible = limiteTotal - gastadoTotalUYU;
-
-							elem.textContent = `$${disponible.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
-							
-							// Cambiar color si queda poco saldo
-							if (disponible < 5000) {
-								elem.style.color = '#DC2626';
-							} else {
-								elem.style.color = 'var(--text)';
-							}
-						}
-					});
-				}
-
+               
                 // ==========================================
                 // SALDOS Y RACHAS
                 // ==========================================
