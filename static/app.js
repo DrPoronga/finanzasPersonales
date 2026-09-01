@@ -738,13 +738,7 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
 
                 document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
                 document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
-
-                document.getElementById('lblDisponibleHoyUYU').textContent = data.disponible_hoy_uyu;
-                document.getElementById('lblDisponibleHoyUSD').textContent = data.disponible_hoy_usd;
-
-                document.getElementById('lblBalanceUYU').textContent = data.balance_uyu;
-                document.getElementById('lblBalanceUSD').textContent = data.balance_usd;
-
+                
                 document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
                 document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
@@ -753,7 +747,7 @@ async function cargarMetricas(mesSeleccionado = '', force = false) {
 
                 document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
                 document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
-
+                
                 document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
                 document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
