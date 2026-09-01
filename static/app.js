@@ -34,8 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Toggles
     const radioBanco = document.getElementById('pagoBanco');
-    const radioTickets = document.getElementById('pagoTickets');
-    const msgTicketsStatus = document.getElementById('msgTicketsStatus');
     const radioTarjeta = document.getElementById('pagoTarjeta');
     const containerTarjeta = document.getElementById('containerTarjeta');
     const selectTarjeta = document.getElementById('selectTarjeta');
@@ -65,7 +63,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let balanceUYUNum = 0;
     let balanceUSDNum = 0;
-    let saldoTicketsDisponibleNum = 0;
     let tipoActual = "Pasivo";
     let gastoPendiente = null;
     let necesitaRecargarMetricas = true;
@@ -112,27 +109,24 @@ document.addEventListener("DOMContentLoaded", () => {
         radioUSD.addEventListener('change', () => inputMoneda.value = 'USD');
     }
 
-    // TOGGLE DE MEDIO DE PAGO (SIN BLOQUEO DE TICKETS)
-    if (radioBanco && radioTickets && radioTarjeta) {
+    // TOGGLE DE MEDIO DE PAGO (SOLO BANCO Y TARJETA)
+    if (radioBanco && radioTarjeta) {
         radioBanco.addEventListener('change', () => {
             selectMedioPago.value = 'Banco';
-            msgTicketsStatus.classList.add('hidden');
             containerTarjeta.classList.add('hidden');
-        });
-
-        radioTickets.addEventListener('change', () => {
-            selectMedioPago.value = 'Tickets';
-            msgTicketsStatus.classList.add('hidden');
-            containerTarjeta.classList.add('hidden');
+            containerCuotas.classList.add('hidden');
+            inputCuotas.value = 1;
         });
 
         radioTarjeta.addEventListener('change', () => {
             selectMedioPago.value = 'Tarjeta';
-            msgTicketsStatus.classList.add('hidden');
             if (tipoActual === 'Pasivo') {
                 containerTarjeta.classList.remove('hidden');
+                containerCuotas.classList.remove('hidden');
             } else {
                 containerTarjeta.classList.add('hidden');
+                containerCuotas.classList.add('hidden');
+                inputCuotas.value = 1;
             }
         });
     }
@@ -289,8 +283,15 @@ document.addEventListener("DOMContentLoaded", () => {
         tipoActual = "Pasivo";
         btnSubmit.textContent = "Registrar Gasto";
         containerPrescindible.classList.remove('hidden');
-        if (containerCuotas) containerCuotas.classList.remove('hidden');
-        if (selectMedioPago.value === 'Tarjeta') containerTarjeta.classList.remove('hidden');
+        
+        if (radioTarjeta.checked) {
+            containerTarjeta.classList.remove('hidden');
+            containerCuotas.classList.remove('hidden');
+        } else {
+            containerTarjeta.classList.add('hidden');
+            containerCuotas.classList.add('hidden');
+        }
+
         mostrarVista(vistaFormulario);
         activarMenu(menuGasto);
         toggleMenu();
@@ -303,7 +304,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btnSubmit.textContent = "Registrar Ingreso";
         containerPrescindible.classList.add('hidden');
         containerTarjeta.classList.add('hidden');
-        if (containerCuotas) containerCuotas.classList.add('hidden');
+        containerCuotas.classList.add('hidden');
+        inputCuotas.value = 1;
+
         mostrarVista(vistaFormulario);
         activarMenu(menuIngreso);
         toggleMenu();
@@ -452,7 +455,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     : `${signo}$${item.monto.toLocaleString('es-UY', {maximumFractionDigits: 0})}`;
 
                 const badgePrescindible = item.prescindible ? '<span class="badge-prescindible">Prescindible</span>' : '';
-                const medioPagoTag = item.medio_pago === 'Tickets' ? '<span class="badge" style="background:#FEF3C7; color:#92400E;">Tickets</span>' : '';
                 const fechaTexto = `${item.fecha} ${item.hora}`;
 
                 itemDiv.innerHTML = `
@@ -461,7 +463,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="detalle-sub">
                             <span>${fechaTexto}</span> • 
                             <span>${item.categoria}</span>
-                            ${medioPagoTag}
                             ${badgePrescindible}
                         </div>
                     </div>
@@ -490,7 +491,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.status === 'success') {
                 balanceUYUNum = data.balance_uyu_num || 0;
                 balanceUSDNum = data.balance_usd_num || 0;
-                saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
 
                 const lblRachaDias = document.getElementById('lblRachaDias');
                 const racha = data.racha_dias || 0;
@@ -694,7 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const prescindible = tipoActual === "Pasivo" ? chkPrescindible.checked : false;
         
         const tarjeta = selectMedioPago.value === 'Tarjeta' ? selectTarjeta.value : '';
-        const cuotas = parseInt(inputCuotas.value) || 1;
+        const cuotas = selectMedioPago.value === 'Tarjeta' ? (parseInt(inputCuotas.value) || 1) : 1;
 
         if (!concepto || isNaN(monto) || monto <= 0) return;
 
@@ -727,7 +727,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 chkPrescindible.checked = false;
                 radioBanco.checked = true;
                 selectMedioPago.value = 'Banco';
-                msgTicketsStatus.classList.add('hidden');
+                containerTarjeta.classList.add('hidden');
+                containerCuotas.classList.add('hidden');
+                inputCuotas.value = 1;
                 gastoPendiente = null;
                 necesitaRecargarMetricas = true;
             } else {
