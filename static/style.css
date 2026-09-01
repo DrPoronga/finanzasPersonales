@@ -211,7 +211,7 @@ button:hover { background-color: var(--primary-hover); }
 .error { background-color: #FAFAFA; border: 1px solid #DDDDDD; color: #333333; }
 
 /* ==========================================
-   4. SELECTORES DE TOGGLE (MONEDA Y CUENTA)
+   4. SELECTORES DE TOGGLE (MONEDA Y FORMA DE PAGO)
    ========================================== */
 .currency-toggle, .payment-toggle {
     display: flex;
@@ -247,7 +247,6 @@ button:hover { background-color: var(--primary-hover); }
     color: var(--text);
 }
 
-/* Deslizadores arreglados para 3 opciones */
 .toggle-slider {
     position: absolute;
     top: 4px; bottom: 4px; left: 4px;
@@ -259,39 +258,9 @@ button:hover { background-color: var(--primary-hover); }
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.toggle-slider-pago {
-    position: absolute;
-    top: 4px; bottom: 4px; left: 4px;
-    width: calc(33.333% - 4px); /* Ajustado para 3 botones */
-    background: var(--surface);
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    z-index: 1;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider {
+.currency-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider,
+.payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider {
     transform: translateX(100%);
-}
-
-.payment-toggle input[type="radio"]:nth-of-type(1):checked ~ .toggle-slider-pago {
-    transform: translateX(0);
-}
-
-.payment-toggle input[type="radio"]:nth-of-type(2):checked ~ .toggle-slider-pago {
-    transform: translateX(100%);
-}
-
-.payment-toggle input[type="radio"]:nth-of-type(3):checked ~ .toggle-slider-pago {
-    transform: translateX(200%);
-}
-
-.tickets-status-msg {
-    font-size: 12px;
-    color: var(--danger-text);
-    font-weight: 500;
-    display: block;
-    margin-top: 4px;
 }
 
 /* ==========================================
@@ -361,28 +330,6 @@ button:hover { background-color: var(--primary-hover); }
     font-weight: 600;
 }
 
-.disponible-card {
-    background: var(--primary);
-    color: white;
-    border: none;
-}
-.disponible-card h3 { color: #A3A3A3; }
-.disponible-card .monto-num { color: white; }
-.disponible-card .badge {
-    background: rgba(255, 255, 255, 0.15);
-    color: #FFFFFF;
-}
-
-.tickets-card {
-    background: #FFFBEB;
-    border: 1px solid #FCD34D;
-}
-.tickets-card h3 { color: #92400E; }
-.tickets-card .badge {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
 .metricas-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -403,12 +350,6 @@ button:hover { background-color: var(--primary-hover); }
 
 .monto-row-compact .val {
     font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-}
-
-.top-cat-text {
-    font-size: 18px;
     font-weight: 600;
     color: var(--text);
 }
@@ -864,25 +805,8 @@ button:hover { background-color: var(--primary-hover); }
 }
 
 /* ==========================================
-   10. PULL TO REFRESH Y BOTONES DE EDICIÓN
+   10. PULL TO REFRESH
    ========================================== */
-.refresh-btn {
-    background: none;
-    border: none;
-    font-size: 22px;
-    cursor: pointer;
-    padding: 4px;
-    transition: transform 0.2s ease;
-    width: auto;
-}
-
-.rotating { animation: spin 0.8s linear infinite; }
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
 .ptr-indicator {
     position: fixed;
     top: -60px;
@@ -914,75 +838,13 @@ button:hover { background-color: var(--primary-hover); }
     animation: spin 0.6s linear infinite;
 }
 
-.btn-edit-balance {
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 2px 6px;
-    font-size: 11px;
-    cursor: pointer;
-    color: var(--subtext);
-    transition: all 0.2s ease;
-    width: auto;
-    display: inline-block;
-}
-
-.btn-edit-balance:hover {
-    background: var(--bg);
-    color: var(--text);
-    border-color: var(--text);
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* ==========================================
-   SISTEMA DE TABS FLUIDO
-   ========================================== */
-.tabs-header {
-    display: flex;
-    width: 100%;
-    background: var(--badge-bg);
-    border-radius: 12px;
-    padding: 4px;
-    margin-bottom: 16px;
-    gap: 4px;
-    box-sizing: border-box;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 12px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--subtext);
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tab-btn.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-}
-
-.tab-content {
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-.tab-content .card {
-    width: 100% !important;
-    box-sizing: border-box !important;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* ==========================================
-   ESTILOS DE TARJETAS DESPLEGABLES (ACORDEÓN)
+   11. TARJETAS DESPLEGABLES (ACORDEÓN)
    ========================================== */
 .card-collapsible {
     padding: 0 !important;
