@@ -127,7 +127,7 @@
                 <!-- NAVEGACIÓN DE TABS -->
                 <div class="tabs-header">
                     <button type="button" class="tab-btn active" data-tab="tabHoy">🎯 Gastos</button>
-                    <button type="button" class="tab-btn" data-tab="tabCuentas">💳 Tarjetas y Fijos</button>
+                    <button type="button" class="tab-btn" data-tab="tabCuentas">📅 Fijos</button>
                     <button type="button" class="tab-btn" data-tab="tabAnalisis">📊 Análisis</button>
                 </div>
 
@@ -194,41 +194,16 @@
                         </div>
                     </div>
 
-                    <!-- DESGLOSE POR CATEGORÍA (MOVIDO AQUÍ PARA MAYOR ÉNFASIS) -->
+                    <!-- DESGLOSE POR CATEGORÍA -->
                     <div class="card desglose-card">
                         <h4>¿En qué estás gastando más? (Por Categoría)</h4>
                         <div id="listaDesglose"></div>
                     </div>
                 </div>
 
-                <!-- ================= TAB 2: TARJETAS Y FIJOS (SOLO CRÉDITO Y DEUDAS) ================= -->
+                <!-- ================= TAB 2: GASTOS FIJOS Y PRÉSTAMOS ================= -->
                 <div id="tabCuentas" class="tab-content hidden">
                     
-                    <!-- CRÉDITO DISPONIBLE TARJETAS -->
-                    <div class="card tarjetas-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3>Disponible en Tarjetas de Crédito</h3>
-                        </div>
-                        <div class="monto-group">
-                            <!-- VISA BBVA -->
-                            <div class="monto-row" style="justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-                                <div>
-                                    <span class="badge">VISA BBVA</span>
-                                    <span id="lblDispBBVA" class="monto-num" style="font-size: 16px;">$0</span>
-                                </div>
-                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - VISA BBVA', 'UYU')">✏️ Editar límite</button>
-                            </div>
-                            <!-- MASTERCARD OCA -->
-                            <div class="monto-row" style="justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-                                <div>
-                                    <span class="badge">OCA</span>
-                                    <span id="lblDispOCA" class="monto-num" style="font-size: 16px;">$0</span>
-                                </div>
-                                <button type="button" class="btn-edit-balance" onclick="editarSaldo('Tarjeta - MASTERCARD OCA', 'UYU')">✏️ Editar límite</button>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- CONTROL DE GASTOS FIJOS -->
                     <div class="card card-interactive" id="cardFijos" title="Toca para ver todos los gastos fijos">
                         <div class="card-header-action">
