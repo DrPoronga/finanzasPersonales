@@ -45,6 +45,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardIngresos = document.getElementById('cardIngresos');
     const cardGastos = document.getElementById('cardGastos');
 
+    // Elementos de la Gráfica
+    const selectTipoGrafico = document.getElementById('selectTipoGrafico');
+    const selectConceptoGrafico = document.getElementById('selectConceptoGrafico');
+    const containerSelectConcepto = document.getElementById('containerSelectConcepto');
+    const canvasGrafico = document.getElementById('canvasGraficoMensual');
+
     // Modal Clasificar
     const modal = document.getElementById('modalCategoria');
     const conceptoModal = document.getElementById('conceptoModal');
@@ -67,6 +73,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let necesitaRecargarMetricas = true;
     let detallesTransaccionesCache = [];
     let gastosFijosCache = [];
+    let historicoMensualCache = {};
+    let listaMesesOrdenados = [];
+    let miGrafico = null;
 
     // --- MANEJO DE ACORDEONES (DESPLEGABLES) ---
     document.querySelectorAll('.card-title-click').forEach(item => {
@@ -498,6 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data.status === 'success') {
                 balanceUYUNum = data.balance_uyu_num || 0;
                 balanceUSDNum = data.balance_usd_num || 0;
+                historicoMensualCache = data.historico_mensual || {};
+                listaMesesOrdenados = data.meses_disponibles || [];
 
                 const lblRachaDias = document.getElementById('lblRachaDias');
                 const racha = data.racha_dias || 0;
@@ -668,11 +679,102 @@ document.addEventListener("DOMContentLoaded", () => {
                 } else {
                     listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
                 }
+
+                // POBLAR SELECTOR DE CONCEPTOS PARA LA GRÁFICA
+                if (data.desglose_conceptos && selectConceptoGrafico) {
+                    selectConceptoGrafico.innerHTML = '';
+                    data.desglose_conceptos.forEach(item => {
+                        const opt = document.createElement('option');
+                        opt.value = item.concepto;
+                        opt.textContent = item.concepto;
+                        selectConceptoGrafico.appendChild(opt);
+                    });
+                }
+
+                // DIBUJAR O ACTUALIZAR GRÁFICA
+                actualizarGraficoMensual();
             }
         } catch (error) {
             console.error("Error cargando métricas", error);
         }
     }
+
+    // --- LÓGICA DE DIBUJO DE CHART.JS ---
+    function actualizarGraficoMensual() {
+        if (!canvasGrafico || !historicoMensualCache) return;
+
+        const tipoGrafico = selectTipoGrafico.value;
+        const conceptoSeleccionado = selectConceptoGrafico.value;
+
+        if (tipoGrafico === 'concepto') {
+            containerSelectConcepto.classList.remove('hidden');
+        } else {
+            containerSelectConcepto.classList.add('hidden');
+        }
+
+        const labels = listaMesesOrdenados.filter(m => m !== 'TODOS');
+        const valoresUYU = [];
+        const valoresUSD = [];
+
+        labels.forEach(mes => {
+            const datosMes = historicoMensualCache[mes] || { ingresos_uyu: 0, gastos_uyu: 0, ingresos_usd: 0, gastos_usd: 0, conceptos: {} };
+
+            if (tipoGrafico === 'gastos') {
+                valoresUYU.push(datosMes.gastos_uyu || 0);
+                valoresUSD.push(datosMes.gastos_usd || 0);
+            } else if (tipoGrafico === 'ingresos') {
+                valoresUYU.push(datosMes.ingresos_uyu || 0);
+                valoresUSD.push(datosMes.ingresos_usd || 0);
+            } else if (tipoGrafico === 'concepto') {
+                const concData = (datosMes.conceptos && datosMes.conceptos[conceptoSeleccionado]) ? datosMes.conceptos[conceptoSeleccionado] : { UYU: 0, USD: 0 };
+                valoresUYU.push(concData.UYU || 0);
+                valoresUSD.push(concData.USD || 0);
+            }
+        });
+
+        if (miGrafico) {
+            miGrafico.destroy();
+        }
+
+        const ctx = canvasGrafico.getContext('2d');
+        miGrafico = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Pesos (UYU)',
+                        data: valoresUYU,
+                        backgroundColor: '#171717',
+                        borderRadius: 6
+                    },
+                    {
+                        label: 'Dólares (USD)',
+                        data: valoresUSD,
+                        backgroundColor: '#737373',
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 12, font: { size: 11 } }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { color: '#E5E5E5' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    selectTipoGrafico?.addEventListener('change', actualizarGraficoMensual);
+    selectConceptoGrafico?.addEventListener('change', actualizarGraficoMensual);
 
     // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });

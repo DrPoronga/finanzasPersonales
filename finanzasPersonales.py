@@ -397,6 +397,9 @@ def obtener_metricas():
         detalles_filtrados = []
         fechas_prescindibles = []
         
+        # AGREGADO: Estructura para la gráfica mensual
+        historico_mensual = {}
+
         gastado_semana_actual_uyu = 0.0
         gastado_semana_actual_usd = 0.0
         inicio_semana_actual = ahora.date() - timedelta(days=ahora.weekday())
@@ -431,6 +434,32 @@ def obtener_metricas():
 
             if mes_registro:
                 meses_encontrados.add(mes_registro)
+
+                # Inicialización del mes en el histórico para gráficas
+                if mes_registro not in historico_mensual:
+                    historico_mensual[mes_registro] = {
+                        "ingresos_uyu": 0.0, "gastos_uyu": 0.0,
+                        "ingresos_usd": 0.0, "gastos_usd": 0.0,
+                        "conceptos": {}
+                    }
+
+                if not es_ajuste:
+                    conc_key = concepto_raw.title()
+                    if conc_key not in historico_mensual[mes_registro]["conceptos"]:
+                        historico_mensual[mes_registro]["conceptos"][conc_key] = {"UYU": 0.0, "USD": 0.0}
+
+                    if es_pasivo(tipo):
+                        if moneda == 'USD':
+                            historico_mensual[mes_registro]["gastos_usd"] += monto
+                            historico_mensual[mes_registro]["conceptos"][conc_key]["USD"] += monto
+                        else:
+                            historico_mensual[mes_registro]["gastos_uyu"] += monto
+                            historico_mensual[mes_registro]["conceptos"][conc_key]["UYU"] += monto
+                    else:
+                        if moneda == 'USD':
+                            historico_mensual[mes_registro]["ingresos_usd"] += monto
+                        else:
+                            historico_mensual[mes_registro]["ingresos_uyu"] += monto
 
             es_prescindible = presc in ['Sí', 'Si', 'True']
             es_no_prescindible = not es_prescindible
@@ -545,33 +574,6 @@ def obtener_metricas():
         balance_real_usd = ingresos_acum_usd - gastos_acum_usd
         balance_real_uyu = ingresos_acum_uyu - gastos_acum_uyu
 
-        compromisos_pendientes_usd = 0.0
-        compromisos_pendientes_uyu = 0.0
-
-        for mon in ['USD', 'UYU']:
-            pendientes_totales = 0.0
-            for cat, meses_data in historial_fijos[mon].items():
-                cant_meses = len(meses_data)
-                if cant_meses >= 1:
-                    promedio_mensual = sum(meses_data.values()) / cant_meses
-                    ya_pagado = pagado_fijos_mes_actual[mon].get(cat, 0.0)
-                    pendiente_cat = max(0.0, promedio_mensual - ya_pagado)
-                    pendientes_totales += pendiente_cat
-
-            if mon == 'USD': compromisos_pendientes_usd = pendientes_totales
-            else: compromisos_pendientes_uyu = pendientes_totales
-
-        disponible_hoy_usd, disponible_hoy_uyu = 0.0, 0.0
-        if mes_solicitado == mes_actual_nombre:
-            dias_totales_mes = calendar.monthrange(ahora.year, ahora.month)[1]
-            dias_restantes = max(1, dias_totales_mes - ahora.day + 1)
-            
-            neto_mes_restante_uyu = max(0.0, ingresos_filtrado_uyu - compromisos_pendientes_uyu - gastos_filtrado_uyu)
-            neto_mes_restante_usd = max(0.0, ingresos_filtrado_usd - compromisos_pendientes_usd - gastos_filtrado_usd)
-
-            disponible_hoy_uyu = neto_mes_restante_uyu / dias_restantes
-            disponible_hoy_usd = neto_mes_restante_usd / dias_restantes
-
         if mes_solicitado == "TODOS":
             divisor_dias = len(fechas_unicas_filtradas) if fechas_unicas_filtradas else 1
         elif mes_solicitado == mes_actual_nombre:
@@ -626,7 +628,6 @@ def obtener_metricas():
         lista_meses = list(MESES.values())
         meses_ordenados = [m for m in lista_meses if m in meses_encontrados or m == mes_actual_nombre]
 
-        # 1. GASTOS FIJOS ESTÁNDAR
         GASTOS_FIJOS_DECLARADOS = [
             "UTE", "OSE", "ANTEL", "PATENTE AUTO", "JIU-JITSU",
             "TARJETA BBVA PESOS", "TARJETA BBVA DOLARES", "TARJETA OCA PESOS", "TARJETA OCA DOLARES", 
@@ -676,19 +677,17 @@ def obtener_metricas():
                 "estado": "Pagado" if fue_pagado else "Pendiente"
             })
 
-        # 2. CONTROL DINÁMICO DE PRÉSTAMOS DESDE LA PESTAÑA `Prestamos`
         for p in prestamos_registros:
             p_nombre = str(p.get('Nombre Prestamo', '')).strip().upper()
             if not p_nombre:
                 continue
 
-            # VERIFICAR SI EL PRÉSTAMO YA EMPEZÓ EN EL MES SOLICITADO
             mes_inicio_str = str(p.get('Mes Inicio', '')).strip().upper()
             if mes_solicitado != "TODOS" and mes_inicio_str in MESES_INV and mes_solicitado in MESES_INV:
                 num_mes_inicio = MESES_INV[mes_inicio_str]
                 num_mes_solicitado = MESES_INV[mes_solicitado]
                 if num_mes_solicitado < num_mes_inicio:
-                    continue  # Aún no arrancó en este mes, no lo agregamos
+                    continue
 
             try:
                 monto_p = float(str(p.get('Monto Cuota', 0)).replace(',', '.').strip() or 0)
@@ -745,34 +744,6 @@ def obtener_metricas():
             })
 
         detalles_fijos.sort(key=lambda x: (0 if x['estado'] == 'Pendiente' else 1, x['concepto']))
-        
-        gastos_por_tarjeta = {
-            "VISA BBVA": {"UYU": 0.0, "USD": 0.0},
-            "MASTERCARD OCA": {"UYU": 0.0, "USD": 0.0}
-        }
-
-        for r in registros:
-            medio_raw = str(r.get('Cuenta') or r.get('Medio de Pago') or '').strip()
-            mes_r = str(r.get('Mes', '')).strip().upper()
-            es_mes_val = (mes_solicitado == "TODOS") or (mes_r == mes_solicitado)
-            
-            if 'Tarjeta' in medio_raw and es_pasivo(r.get('Tipo')) and es_mes_val:
-                monto_r = float(str(r.get('Monto', 0)).replace(',', '.') or 0)
-                mon_r = normalizar_moneda(r.get('Moneda'))
-                
-                for t_nombre in gastos_por_tarjeta.keys():
-                    if t_nombre in medio_raw.upper():
-                        gastos_por_tarjeta[t_nombre][mon_r] += monto_r
-
-        limites_tarjetas = {}
-        for t in tarjetas_registros:
-            nombre_t = str(t.get('Nombre Tarjeta', '')).strip().upper()
-            try:
-                limite_val = float(str(t.get('Limite UYU', 0)).replace(',', '.').strip())
-            except (ValueError, TypeError):
-                limite_val = 50000.0
-            if nombre_t:
-                limites_tarjetas[nombre_t] = limite_val
                         
         return jsonify({
             "status": "success",
@@ -781,8 +752,6 @@ def obtener_metricas():
             "balance_usd_num": balance_real_usd,
             "meses_disponibles": meses_ordenados,
             "racha_dias": racha_dias,
-            "saldo_tickets_uyu": f"${saldo_tickets_uyu:,.0f}",
-            "saldo_tickets_num": saldo_tickets_uyu,
             "meta_semanal_uyu": f"${meta_semanal_prescindible_uyu:,.0f}",
             "gastado_semana_uyu": f"${gastado_semana_actual_uyu:,.0f}",
             "disponible_semana_uyu": f"${disponible_meta_semanal_uyu:,.0f}",
@@ -790,10 +759,6 @@ def obtener_metricas():
             "gastado_mes_uyu": f"${prescindible_filtrado_uyu:,.0f}",
             "disponible_mes_uyu": f"${disponible_meta_mensual_uyu:,.0f}",
             "pct_prescindible_utilizado": round(pct_prescindible_utilizado, 1),
-            "disponible_hoy_uyu": f"${disponible_hoy_uyu:,.0f}" if mes_solicitado == mes_actual_nombre else "-",
-            "disponible_hoy_usd": f"US${disponible_hoy_usd:,.2f}" if mes_solicitado == mes_actual_nombre else "-",
-            "balance_uyu": f"${balance_real_uyu:,.0f}",
-            "balance_usd": f"US${balance_real_usd:,.2f}",
             "ingresos_uyu": f"${ingresos_filtrado_uyu:,.0f}",
             "ingresos_usd": f"US${ingresos_filtrado_usd:,.2f}",
             "gastos_uyu": f"${gastos_filtrado_uyu:,.0f}",
@@ -811,8 +776,7 @@ def obtener_metricas():
             "desglose_conceptos": desglose_conceptos,
             "detalles": detalles_filtrados,
             "fijos": detalles_fijos,
-            "gastos_por_tarjeta": gastos_por_tarjeta,
-            "limites_tarjetas": limites_tarjetas
+            "historico_mensual": historico_mensual
         })
 
     except Exception as e:
@@ -820,7 +784,7 @@ def obtener_metricas():
         SESSIONS_CACHE["doc"] = None
         invalidar_cache()
         return jsonify({"status": "error", "message": str(e)}), 500
-
+        
 @app.route('/obtener_conceptos', methods=['GET'])
 @requiere_pin
 def obtener_conceptos():

@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="/static/icono.png">
     
     <link rel="stylesheet" href="/static/style.css">
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -115,7 +116,35 @@
 
            <!-- VISTA MÉTRICAS / FINANZAS UNIFICADA -->
             <section id="vistaMetricas" class="hidden">
-                
+				
+				<!-- 0. GRÁFICA DE EVOLUCIÓN MENSUAL -->
+                <div class="card card-collapsible active" id="groupGrafico">
+                    <div class="card-header-collapsible">
+                        <div class="card-title-click">
+                            <span class="arrow-icon">▼</span>
+                            <h4>📈 Evolución Mensual</h4>
+                        </div>
+                    </div>
+                    <div class="card-body-collapsible">
+                        <!-- FILTROS DE LA GRÁFICA -->
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <select id="selectTipoGrafico">
+                                <option value="gastos">Total Gastos</option>
+                                <option value="ingresos">Total Ingresos</option>
+                                <option value="concepto">Ítem Específico</option>
+                            </select>
+                        </div>
+                        <div class="form-group hidden" id="containerSelectConcepto" style="margin-bottom: 10px;">
+                            <select id="selectConceptoGrafico"></select>
+                        </div>
+
+                        <!-- CANVAS DE LA GRÁFICA -->
+                        <div style="position: relative; width: 100%; height: 260px;">
+                            <canvas id="canvasGraficoMensual"></canvas>
+                        </div>
+                    </div>
+                </div>
+				
                 <!-- FILTRO DE MESES -->
                 <div class="form-group filtro-mes-group">
                     <select id="selectMesFiltro"></select>
