@@ -596,205 +596,198 @@ window.editarSaldo = async function(medioPago, moneda) {
     }
 	
 async function cargarMetricas(mesSeleccionado = '', force = false) {
-        try {
-            let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
-            if (force) {
-                url += (url.includes('?') ? '&' : '?') + 'force=true';
+    try {
+        let url = mesSeleccionado ? `/obtener_metricas?mes=${encodeURIComponent(mesSeleccionado)}` : '/obtener_metricas';
+        if (force) {
+            url += (url.includes('?') ? '&' : '?') + 'force=true';
+        }
+
+        const res = await fetch(url);
+        if (res.status === 401) { bloquearApp(); return; }
+        
+        const data = await res.json();
+        if (data.status === 'success') {
+            balanceUYUNum = data.balance_uyu_num || 0;
+            balanceUSDNum = data.balance_usd_num || 0;
+            saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
+
+            const lblRachaDias = document.getElementById('lblRachaDias');
+            const racha = data.racha_dias || 0;
+            if (lblRachaDias) {
+                lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
             }
 
-            const res = await fetch(url);
-            if (res.status === 401) { bloquearApp(); return; }
+            document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
+            document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
+            document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
+
+            document.getElementById('lblMetaMensual').textContent = `Meta: ${data.meta_mensual_uyu}`;
+            document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
+            document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
+
+            const pctUtilizado = data.pct_prescindible_utilizado || 0;
+            const fillBar = document.getElementById('barPrescindibleFill');
+            if (fillBar) {
+                fillBar.style.width = `${pctUtilizado}%`;
+                fillBar.classList.remove('fill-warning', 'fill-danger');
+                if (pctUtilizado > 85) {
+                    fillBar.classList.add('fill-danger');
+                } else if (pctUtilizado > 60) {
+                    fillBar.classList.add('fill-warning');
+                }
+            }
+
+            // CARGA Y RENDERIZADO DE GASTOS FIJOS
+            const listaFijos = document.getElementById('listaFijos');
+            if (listaFijos) {
+                listaFijos.innerHTML = '';
+                gastosFijosCache = data.fijos || [];
+
+                if (gastosFijosCache.length > 0) {
+                    gastosFijosCache.forEach(fijo => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.className = 'fijo-item';
+
+                        const esPagado = fijo.estado === 'Pagado';
+                        const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
+                        const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
+                        const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+
+                        const textoMonto = esPagado 
+                            ? `<span>Pagado: <strong>${montoFmt}</strong></span>`
+                            : `<span style="color: var(--subtext);">Pendiente de pago (${montoFmt})</span>`;
+
+                        itemDiv.innerHTML = `
+                            <div class="fijo-header">
+                                <span class="fijo-nombre">${fijo.concepto}</span>
+                                <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
+                            </div>
+                            <div class="fijo-monto">
+                                ${textoMonto}
+                            </div>
+                        `;
+                        listaFijos.appendChild(itemDiv);
+                    });
+                } else {
+                    listaFijos.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos fijos registrados.</div>';
+                }
+            }
             
-            const data = await res.json();
-            if (data.status === 'success') {
-                balanceUYUNum = data.balance_uyu_num || 0;
-                balanceUSDNum = data.balance_usd_num || 0;
-                saldoTicketsDisponibleNum = data.saldo_tickets_num || 0;
+            necesitaRecargarMetricas = false;
+            detallesTransaccionesCache = data.detalles || [];
 
-               
-                // ==========================================
-                // SALDOS Y RACHAS
-                // ==========================================
-                const lblSaldoTickets = document.getElementById('lblSaldoTickets');
-                if (lblSaldoTickets) {
-                    lblSaldoTickets.textContent = data.saldo_tickets_uyu;
-                }
+            const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
+            const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
+            const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
 
-                const lblRachaDias = document.getElementById('lblRachaDias');
-                const racha = data.racha_dias || 0;
-                if (lblRachaDias) {
-                    lblRachaDias.textContent = `${racha} ${racha === 1 ? 'Día' : 'Días'}`;
-                }
+            document.getElementById('cntPrescindibles').textContent = `${cntPrescindibles} movs`;
+            document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
+            document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
 
-                document.getElementById('lblMetaSemanal').textContent = `Meta: ${data.meta_semanal_uyu}`;
-                document.getElementById('lblGastadoSemana').textContent = data.gastado_semana_uyu;
-                document.getElementById('lblDisponibleSemana').textContent = data.disponible_semana_uyu;
+            document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
+            document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
 
-                document.getElementById('lblMetaMensual').textContent = `Meta: ${data.meta_mensual_uyu}`;
-                document.getElementById('lblGastadoMes').textContent = data.gastado_mes_uyu;
-                document.getElementById('lblDisponibleMes').textContent = data.disponible_mes_uyu;
+            document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
+            document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
 
-                const pctUtilizado = data.pct_prescindible_utilizado || 0;
-                const fillBar = document.getElementById('barPrescindibleFill');
-                if (fillBar) {
-                    fillBar.style.width = `${pctUtilizado}%`;
-                    fillBar.classList.remove('fill-warning', 'fill-danger');
-                    if (pctUtilizado > 85) {
-                        fillBar.classList.add('fill-danger');
-                    } else if (pctUtilizado > 60) {
-                        fillBar.classList.add('fill-warning');
-                    }
-                }
+            document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
+            document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
 
-                const listaFijos = document.getElementById('listaFijos');
-                if (listaFijos) {
-                    listaFijos.innerHTML = '';
-                    gastosFijosCache = data.fijos || [];
-                    const top3 = gastosFijosCache.slice(0, 3);
+            document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
+            document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
 
-                    if (top3.length > 0) {
-                        top3.forEach(fijo => {
-                            const itemDiv = document.createElement('div');
-                            itemDiv.className = 'fijo-item';
+            document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
+            document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
 
-                            const esPagado = fijo.estado === 'Pagado';
-                            const badgeClass = esPagado ? 'badge-pagado' : 'badge-pendiente';
-                            const monedaSym = fijo.moneda === 'USD' ? 'US$' : '$';
-                            const montoFmt = `${monedaSym}${fijo.monto_pagado.toLocaleString('es-UY', {maximumFractionDigits:0})}`;
+            document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
+            document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
-                            const textoMonto = esPagado 
-                                ? `<span>Pagado: <strong>${montoFmt}</strong></span>`
-                                : `<span style="color: var(--subtext);">Pendiente de pago</span>`;
+            document.getElementById('lblTopCategoria').textContent = data.top_categoria;
 
-                            itemDiv.innerHTML = `
-                                <div class="fijo-header">
-                                    <span class="fijo-nombre">${fijo.concepto}</span>
-                                    <span class="badge-fijo ${badgeClass}">${fijo.estado}</span>
-                                </div>
-                                <div class="fijo-monto">
-                                    ${textoMonto}
-                                </div>
-                            `;
-                            listaFijos.appendChild(itemDiv);
-                        });
-                    }
-                }
-                
-                necesitaRecargarMetricas = false;
-                detallesTransaccionesCache = data.detalles || [];
+            selectMesFiltro.innerHTML = '';
+            data.meses_disponibles.forEach(mes => {
+                const opt = document.createElement('option');
+                opt.value = mes;
+                opt.textContent = mes;
+                if (mes === data.mes_actual) opt.selected = true;
+                selectMesFiltro.appendChild(opt);
+            });
 
-                const cntIngresos = detallesTransaccionesCache.filter(t => t.tipo === 'Activo').length;
-                const cntGastos = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo').length;
-                const cntPrescindibles = detallesTransaccionesCache.filter(t => t.tipo === 'Pasivo' && t.prescindible === true).length;
+            const optTodos = document.createElement('option');
+            optTodos.value = "TODOS";
+            optTodos.textContent = "TODO EL HISTORIAL";
+            if (data.mes_actual === "TODOS") optTodos.selected = true;
+            selectMesFiltro.appendChild(optTodos);
 
-                document.getElementById('cntPrescindibles').textContent = `${cntPrescindibles} movs`;
-                document.getElementById('cntIngresos').textContent = `${cntIngresos} movs`;
-                document.getElementById('cntGastos').textContent = `${cntGastos} movs`;
+            const listaConceptosContainer = document.getElementById('listaConceptos');
+            if (listaConceptosContainer) {
+                listaConceptosContainer.innerHTML = '';
+                if (data.desglose_conceptos && data.desglose_conceptos.length > 0) {
+                    const maxConcepto = Math.max(...data.desglose_conceptos.map(d => d.monto_total_aprox || 0));
 
-                document.getElementById('lblCompGastos').textContent = data.comp_gastos || '';
-                document.getElementById('lblCompIngresos').textContent = data.comp_ingresos || '';
-                
-                document.getElementById('lblPrescindibleUYU').textContent = data.prescindible_uyu;
-                document.getElementById('lblPrescindibleUSD').textContent = data.prescindible_usd;
-
-                document.getElementById('lblIngresosUYU').textContent = data.ingresos_uyu;
-                document.getElementById('lblIngresosUSD').textContent = data.ingresos_usd;
-
-                document.getElementById('lblGastosUYU').textContent = data.gastos_uyu;
-                document.getElementById('lblGastosUSD').textContent = data.gastos_usd;
-                
-                document.getElementById('lblGastoDiarioUYU').textContent = data.gasto_diario_uyu;
-                document.getElementById('lblGastoDiarioUSD').textContent = data.gasto_diario_usd;
-
-                document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
-                document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
-
-                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
-
-                selectMesFiltro.innerHTML = '';
-                data.meses_disponibles.forEach(mes => {
-                    const opt = document.createElement('option');
-                    opt.value = mes;
-                    opt.textContent = mes;
-                    if (mes === data.mes_actual) opt.selected = true;
-                    selectMesFiltro.appendChild(opt);
-                });
-
-                const optTodos = document.createElement('option');
-                optTodos.value = "TODOS";
-                optTodos.textContent = "TODO EL HISTORIAL";
-                if (data.mes_actual === "TODOS") optTodos.selected = true;
-                selectMesFiltro.appendChild(optTodos);
-
-                const listaConceptosContainer = document.getElementById('listaConceptos');
-                if (listaConceptosContainer) {
-                    listaConceptosContainer.innerHTML = '';
-                    if (data.desglose_conceptos && data.desglose_conceptos.length > 0) {
-                        const maxConcepto = Math.max(...data.desglose_conceptos.map(d => d.monto_total_aprox || 0));
-
-                        data.desglose_conceptos.slice(0, 8).forEach(item => {
-                            const divItem = document.createElement('div');
-                            divItem.className = 'desglose-item';
-                            
-                            let valoresHtml = '';
-                            if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
-                            if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
-
-                            const porcentajeBarra = maxConcepto > 0 ? ((item.monto_total_aprox / maxConcepto) * 100).toFixed(1) : 0;
-
-                            divItem.innerHTML = `
-                                <div>
-                                    <span class="desglose-nombre">${item.concepto}</span>
-                                    <span class="concepto-subcat">${item.categoria}</span>
-                                </div>
-                                <div class="desglose-valores">${valoresHtml}</div>
-                                <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
-                            `;
-                            listaConceptosContainer.appendChild(divItem);
-                        });
-                    } else {
-                        listaConceptosContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin datos registrados.</div>';
-                    }
-                }
-
-                const listaContainer = document.getElementById('listaDesglose');
-                listaContainer.innerHTML = '';
-
-                if (data.desglose && data.desglose.length > 0) {
-                    const maxGasto = Math.max(...data.desglose.map(d => d.monto_total_aprox || 0));
-
-                    data.desglose.forEach(item => {
+                    data.desglose_conceptos.slice(0, 8).forEach(item => {
                         const divItem = document.createElement('div');
                         divItem.className = 'desglose-item';
-                        divItem.setAttribute('data-categoria', item.categoria);
                         
                         let valoresHtml = '';
                         if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
                         if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
 
-                        const porcentajeBarra = maxGasto > 0 ? ((item.monto_total_aprox / maxGasto) * 100).toFixed(1) : 0;
+                        const porcentajeBarra = maxConcepto > 0 ? ((item.monto_total_aprox / maxConcepto) * 100).toFixed(1) : 0;
 
                         divItem.innerHTML = `
-                            <span class="desglose-nombre">${item.categoria}</span>
+                            <div>
+                                <span class="desglose-nombre">${item.concepto}</span>
+                                <span class="concepto-subcat">${item.categoria}</span>
+                            </div>
                             <div class="desglose-valores">${valoresHtml}</div>
                             <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
                         `;
-
-                        divItem.addEventListener('click', () => {
-                            abrirModalDetalles('categoria', item.categoria);
-                        });
-
-                        listaContainer.appendChild(divItem);
+                        listaConceptosContainer.appendChild(divItem);
                     });
                 } else {
-                    listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
+                    listaConceptosContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin datos registrados.</div>';
                 }
             }
-        } catch (error) {
-            console.error("Error cargando métricas", error);
+
+            const listaContainer = document.getElementById('listaDesglose');
+            listaContainer.innerHTML = '';
+
+            if (data.desglose && data.desglose.length > 0) {
+                const maxGasto = Math.max(...data.desglose.map(d => d.monto_total_aprox || 0));
+
+                data.desglose.forEach(item => {
+                    const divItem = document.createElement('div');
+                    divItem.className = 'desglose-item';
+                    divItem.setAttribute('data-categoria', item.categoria);
+                    
+                    let valoresHtml = '';
+                    if (item.monto_uyu) valoresHtml += `<span class="desglose-monto">${item.monto_uyu}</span>`;
+                    if (item.monto_usd) valoresHtml += `<span class="desglose-monto">${item.monto_usd}</span>`;
+
+                    const porcentajeBarra = maxGasto > 0 ? ((item.monto_total_aprox / maxGasto) * 100).toFixed(1) : 0;
+
+                    divItem.innerHTML = `
+                        <span class="desglose-nombre">${item.categoria}</span>
+                        <div class="desglose-valores">${valoresHtml}</div>
+                        <div class="desglose-bar" style="width: ${porcentajeBarra}%;"></div>
+                    `;
+
+                    divItem.addEventListener('click', () => {
+                        abrirModalDetalles('categoria', item.categoria);
+                    });
+
+                    listaContainer.appendChild(divItem);
+                });
+            } else {
+                listaContainer.innerHTML = '<div style="color: var(--subtext); font-size: 14px;">Sin gastos registrados.</div>';
+            }
         }
+    } catch (error) {
+        console.error("Error cargando métricas", error);
     }
-	
+}
+
    // TARJETAS INTERACTIVAS
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
     cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });
