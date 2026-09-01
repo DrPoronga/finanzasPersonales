@@ -116,7 +116,7 @@
                 </form>
             </section>
 
-            <!-- VISTA MÉTRICAS / FINANZAS CON TABS -->
+           <!-- VISTA MÉTRICAS / FINANZAS -->
             <section id="vistaMetricas" class="hidden">
                 
                 <!-- FILTRO DE MESES -->
@@ -126,12 +126,11 @@
 
                 <!-- NAVEGACIÓN DE TABS -->
                 <div class="tabs-header">
-                    <button type="button" class="tab-btn active" data-tab="tabHoy">🎯 Gastos</button>
-                    <button type="button" class="tab-btn" data-tab="tabCuentas">📅 Fijos</button>
+                    <button type="button" class="tab-btn active" data-tab="tabHoy">🎯 Gastos y Fijos</button>
                     <button type="button" class="tab-btn" data-tab="tabAnalisis">📊 Análisis</button>
                 </div>
 
-                <!-- ================= TAB 1: GASTOS (ÉNFASIS EN PRESCINDIBLES Y CATEGORÍAS) ================= -->
+                <!-- ================= TAB 1: GASTOS, CATEGORÍAS Y FIJOS ================= -->
                 <div id="tabHoy" class="tab-content active">
                     
                     <!-- DESTACADO GAMIFICADO: RACHA DE DÍAS -->
@@ -199,12 +198,8 @@
                         <h4>¿En qué estás gastando más? (Por Categoría)</h4>
                         <div id="listaDesglose"></div>
                     </div>
-                </div>
 
-                <!-- ================= TAB 2: GASTOS FIJOS Y PRÉSTAMOS ================= -->
-                <div id="tabCuentas" class="tab-content hidden">
-                    
-                    <!-- CONTROL DE GASTOS FIJOS -->
+                    <!-- CONTROL DE GASTOS FIJOS Y PRÉSTAMOS -->
                     <div class="card card-interactive" id="cardFijos" title="Toca para ver todos los gastos fijos">
                         <div class="card-header-action">
                             <h4>Control de Gastos Fijos y Préstamos</h4>
@@ -213,7 +208,7 @@
                     </div>
                 </div>
 
-                <!-- ================= TAB 3: ANÁLISIS ================= -->
+                <!-- ================= TAB 2: ANÁLISIS ================= -->
                 <div id="tabAnalisis" class="tab-content hidden">
                     
                     <!-- MÉTRICAS BIMONEDA -->
