@@ -980,3 +980,76 @@ button:hover { background-color: var(--primary-hover); }
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================
+   ESTILOS DE TARJETAS DESPLEGABLES (ACORDEÓN)
+   ========================================== */
+.card-collapsible {
+    padding: 0 !important;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.card-header-collapsible {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px;
+    background: var(--surface);
+    user-select: none;
+}
+
+.card-title-click {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+    cursor: pointer;
+}
+
+.card-title-click h4 {
+    margin: 0 !important;
+    font-size: 13px !important;
+}
+
+.arrow-icon {
+    font-size: 10px;
+    color: var(--subtext);
+    transition: transform 0.25s ease;
+}
+
+.card-collapsible:not(.active) .arrow-icon {
+    transform: rotate(-90deg);
+}
+
+.card-body-collapsible {
+    padding: 0 18px 16px 18px;
+    display: block;
+}
+
+.card-collapsible:not(.active) .card-body-collapsible {
+    display: none;
+}
+
+.btn-expand-modal {
+    background: var(--badge-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    width: auto !important;
+    margin-left: 10px;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-expand-modal:hover {
+    background: var(--border);
+}
+
+.btn-expand-modal:active {
+    transform: scale(0.92);
+}

@@ -44,7 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardPrescindible = document.getElementById('cardPrescindible');
     const cardIngresos = document.getElementById('cardIngresos');
     const cardGastos = document.getElementById('cardGastos');
-    const cardFijos = document.getElementById('cardFijos');
 
     // Modal Clasificar
     const modal = document.getElementById('modalCategoria');
@@ -68,21 +67,29 @@ document.addEventListener("DOMContentLoaded", () => {
     let necesitaRecargarMetricas = true;
     let detallesTransaccionesCache = [];
     let gastosFijosCache = [];
-	
-    // --- MANEJO DE TABS EN VISTA METRICAS ---
-    const tabBtns = document.querySelectorAll('.tab-btn');
-    const tabContents = document.querySelectorAll('.tab-content');
 
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const targetTab = btn.getAttribute('data-tab');
-
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.add('hidden'));
-
-            btn.classList.add('active');
-            document.getElementById(targetTab).classList.remove('hidden');
+    // --- MANEJO DE ACORDEONES (DESPLEGABLES) ---
+    document.querySelectorAll('.card-title-click').forEach(item => {
+        item.addEventListener('click', () => {
+            const card = item.closest('.card-collapsible');
+            if (card) card.classList.toggle('active');
         });
+    });
+
+    // --- BOTONES EXPANDIR MODAL ---
+    document.getElementById('btnExpandCategoria')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirModalDetalles('gastos');
+    });
+
+    document.getElementById('btnExpandFijos')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirModalDetalles('fijos');
+    });
+
+    document.getElementById('btnExpandConceptos')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        abrirModalDetalles('gastos');
     });
 
     checkAutenticacion();
@@ -109,7 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         radioUSD.addEventListener('change', () => inputMoneda.value = 'USD');
     }
 
-    // TOGGLE DE MEDIO DE PAGO (SOLO BANCO Y TARJETA)
+    // TOGGLE DE MEDIO DE PAGO
     if (radioBanco && radioTarjeta) {
         radioBanco.addEventListener('change', () => {
             selectMedioPago.value = 'Banco';
@@ -583,8 +590,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById('lblTasaAhorroUYU').textContent = data.tasa_ahorro_uyu;
                 document.getElementById('lblTasaAhorroUSD').textContent = data.tasa_ahorro_usd;
 
-                document.getElementById('lblTopCategoria').textContent = data.top_categoria;
-
                 selectMesFiltro.innerHTML = '';
                 data.meses_disponibles.forEach(mes => {
                     const opt = document.createElement('option');
@@ -673,7 +678,6 @@ document.addEventListener("DOMContentLoaded", () => {
     cardPrescindible.addEventListener('click', () => { abrirModalDetalles('prescindibles'); });
     cardIngresos.addEventListener('click', () => { abrirModalDetalles('ingresos'); });
     cardGastos.addEventListener('click', () => { abrirModalDetalles('gastos'); });
-    if (cardFijos) { cardFijos.addEventListener('click', () => { abrirModalDetalles('fijos'); }); }
 
     modalDetalle.addEventListener('click', (e) => {
         if (e.target === modalDetalle) {
