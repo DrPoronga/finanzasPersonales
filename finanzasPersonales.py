@@ -845,5 +845,43 @@ def actualizar_limite_tarjeta():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# ==========================================
+# WEBHOOK PARA INTEGRACIÓN CON CROISS APP
+# ==========================================
+@app.route('/api/webhook/ingreso_croiss', methods=['POST'])
+def webhook_ingreso_croiss():
+    datos = request.get_json() or {}
+    secret = datos.get('secret')
+    
+    # Verificación de seguridad
+    if secret != os.environ.get('WEBHOOK_SECRET', 'super_secreto_croiss_2026'):
+        return jsonify({"status": "error", "message": "No autorizado"}), 401
+
+    monto = float(datos.get('monto', 0))
+    concepto = str(datos.get('concepto', 'Ventas Croiss')).strip()
+    
+    if monto <= 0:
+        return jsonify({"status": "error", "message": "Monto inválido"}), 400
+
+    ahora = datetime.now()
+    fecha_hoy = ahora.strftime("%d/%m/%Y")
+    hora_actual = ahora.strftime("%H:%M")
+    nombre_mes = MESES[ahora.month]
+
+    try:
+        doc = conectar_google_sheets()
+        hoja_transacciones = doc.worksheet("Transacciones")
+
+        # Inserta: Fecha, Hora, Concepto, Monto, Moneda, Categoria, Mes, Tipo, Presc, Cuenta
+        hoja_transacciones.append_row(
+            [fecha_hoy, hora_actual, concepto, monto, 'UYU', 'Ventas', nombre_mes, 'Activo', 'No', 'Banco'],
+            value_input_option='RAW'
+        )
+
+        invalidar_cache()
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+        
 if __name__ == '__main__':
     app.run(debug=True)
